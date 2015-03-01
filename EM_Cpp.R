@@ -41,12 +41,12 @@ X = Dat[,1:p]
 Y = Dat[,-(1:p)]
 
 #ret = list(W=c(W),C=c(C),PYo=c(PYo),PXo=c(PXo),B=B_T,sig=c(sigX^2,sigY^2,sigH^2,sigT^2,sigTo^2,sigUo^2));
-ret = list(W=orth(runif(p)),C=orth(runif(q)),PYo=orth(runif(p)),PXo=orth(runif(q)),B=rchisq(1,1),sig=c(orth(rchisq(6,1))));
+ret = list(W=orth(runif(p)),C=orth(runif(q)),PYo=orth(runif(p)),PXo=orth(runif(q)),B=rchisq(1,1),sig2=c(orth(rchisq(6,1))));
 
 ret2 = try(EMC(EMsteps,ret,Dat,0.1,0.1),T);
 while(class(ret2)!="list"){
   #ret2=list(W=c(W*NA),C=c(C*NA),PYo=c(W*NA),PXo=c(C*NA))
-  ret = list(W=orth(runif(p)),C=orth(runif(q)),PYo=orth(runif(p)),PXo=orth(runif(q)),B=rchisq(1,1),sig=c(orth(rchisq(6,1))));
+  ret = list(W=orth(runif(p)),C=orth(runif(q)),PYo=orth(runif(p)),PXo=orth(runif(q)),B=rchisq(1,1),sig2=c(orth(rchisq(6,1))));
   ret2 = try(EMC(EMsteps,ret,Dat,0.1,0.1),T);
 }
 Est[[ind_i]] = list(W=corr.o2m(ret2$W,W),C=corr.o2m(ret2$C,C),PYo=corr.o2m(ret2$PYo,PYo),PXo=corr.o2m(ret2$PXo,PXo))
