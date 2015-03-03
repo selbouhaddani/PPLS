@@ -1,4 +1,3 @@
-# This sets up necessary files to do EM on simulated data in Rcpp
 
 ##### INSTALL.PACKAGES #####################################
 #install.packages("ChemometricsWithR")
@@ -43,7 +42,7 @@ library('Rcpp')
 library('RcppEigen')
 library('BH')
 
-source('C:\\Users\\selbouhaddani\\OneDrive\\LUMC\\PhD\\Rcode\\Functions\\functions.R')
-Rcpp::sourceCpp('C:\\Users\\selbouhaddani\\OneDrive\\LUMC\\PhD\\Rcode\\Functions\\loglC.cpp')
+source('functions.R')
+Rcpp::sourceCpp('loglC.cpp')
 
 #########################################################

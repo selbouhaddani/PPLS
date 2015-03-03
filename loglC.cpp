@@ -17,9 +17,9 @@ using namespace boost;
 // [[Rcpp::export]]
 double loglC(VectorXd W,VectorXd C,VectorXd P_Yosc,VectorXd P_Xosc,double B_T, MatrixXd Dat,
                   double sig2X,double sig2Y,double sig2H,double sig2T,double sig2To,double sig2Uo)
-// Input: Model parameters/loadings, Data Dat, sigmas for scores and noise
+{// Input: Model parameters/loadings, Data Dat, sigmas for scores and noise
 // Output: Loglikelihood of the data given parameters 
-{
+
   unsigned int N = Dat.rows();   // Sample size
   unsigned int p = W.size();     // ncol X
   unsigned int q = C.size();     // ncol Y
@@ -68,10 +68,10 @@ double loglC(VectorXd W,VectorXd C,VectorXd P_Yosc,VectorXd P_Xosc,double B_T, M
 // [[Rcpp::export]]
 MatrixXd simulC(int N, VectorXd W,VectorXd C,VectorXd P_Yosc,VectorXd P_Xosc,double B_T,
                   double sigX,double sigY,double sigH,double sigT,double sigTo,double sigUo)
-// Input: Number of samples N, loadings, parameters
+{// Input: Number of samples N, loadings, parameters
 // Output: Dat = [X,Y] simulated from O2PLS with normal distributions
 // Note: uses random number generator
-{
+
   RNGScope scope;    // ensure RNG gets set/reset
   const int p = W.size();
   const int q = C.size();
@@ -129,10 +129,10 @@ MatrixXd simulC(int N, VectorXd W,VectorXd C,VectorXd P_Yosc,VectorXd P_Xosc,dou
 
 // [[Rcpp::export]]
 double findr1(double lambda2, VectorXd Cxt, VectorXd Cxto, double Ctt, double Ctto, double Ctoto)
-// Input: Lagrange multiplier lambda2, sufficient statistics C..
+  {// Input: Lagrange multiplier lambda2, sufficient statistics C..
 // Output: The norm of W minus 1
 // This function is used to solve findr1(lambda2) == 0 for lambda2
-  {
+
   double alp2 = Ctoto + lambda2;
   
   // ||Cxt||^2, ||Cxto||^2 and Cxt'*Cxto
@@ -166,11 +166,10 @@ double findr1(double lambda2, VectorXd Cxt, VectorXd Cxto, double Ctt, double Ct
 
 // [[Rcpp::export]]
 MatrixXd findr2(double lambda2, VectorXd Cxt, VectorXd Cxto, double Ctt, double Ctto, double Ctoto)
-// Input: Lagrange multiplier lambda2, sufficient statistics C..
+  {// Input: Lagrange multiplier lambda2, sufficient statistics C..
 // Output: [W , P]
 // This function is used to get W after findr1 == 0 is solved
 // I thought of overloading findr1, but Rcpp does not export overloaded functions to R i guess
-  {
   
   double alp2 = Ctoto + lambda2;
   
@@ -206,10 +205,10 @@ MatrixXd findr2(double lambda2, VectorXd Cxt, VectorXd Cxto, double Ctt, double 
 List EMstepC(VectorXd W,VectorXd C,VectorXd P_Yosc,VectorXd P_Xosc,double B_T, MatrixXd Dat,
               double sig2X,double sig2Y,double sig2H,double sig2T,double sig2To,double sig2Uo,
               double startroot_X, double startroot_Y)
-// Input: (initial) loadings, data, sd^2, rootsolver initializer
+{// Input: (initial) loadings, data, sd^2, rootsolver initializer
 // Output: List of updated Loadings and sd^2, based on current Loadings
 // Structure is 1) calculate scores based on loadings, 2) calculate loadings based on scores
-{
+
   int N = Dat.rows();
   int p = W.size();
   int q = C.size();
@@ -372,13 +371,12 @@ List EMstepC(VectorXd W,VectorXd C,VectorXd P_Yosc,VectorXd P_Xosc,double B_T, M
 
 // [[Rcpp::export]]
 List EMC(int maxit, List ret, MatrixXd Dat,double startroot_X,double startroot_Y)
-// Input: (max) #EM steps, list of loadings, data, initializer rootfinder
+{// Input: (max) #EM steps, list of loadings, data, initializer rootfinder
 // Output: Updated Loadings after maxit EM steps and loglikelihood per step
-{
+
   VectorXd loglik(maxit+1);
   VectorXd sig2nw = ret["sig2"];
   
-  // Note, loglik uses sd, whereas EMstepC uses sd^2
   loglik(0) = loglC(ret["W"],ret["C"],ret["PYo"],ret["PXo"],ret["B"],Dat,
                     (sig2nw(0)),(sig2nw(1)),(sig2nw(2)),(sig2nw(3)),(sig2nw(4)),(sig2nw(5)));
   
