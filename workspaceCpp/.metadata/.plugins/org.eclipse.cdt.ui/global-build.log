@@ -1,0 +1,35 @@
+17:11:01 **** Rebuild of configuration Debug for project test ****
+Info: Internal Builder is used for build
+g++ "-IC:\\boost_1_57_0" "-IC:\\Eigen" -O0 -g3 -pg -Wall -c -fmessage-length=0 -o "src\\test.o" "..\\src\\test.cpp" 
+g++ -pg -o test.exe "src\\test.o" 
+Info: Nothing to build for test
+Info: Nothing to build for test
+17:11:57 **** Incremental Build of configuration Debug for project test ****
+Info: Internal Builder is used for build
+g++ "-IC:\\boost_1_57_0" "-IC:\\Eigen" -O0 -g3 -pg -Wall -c -fmessage-length=0 -o "src\\test.o" "..\\src\\test.cpp" 
+g++ -pg -o test.exe "src\\test.o" 
+Info: Nothing to build for test
+Info: Nothing to build for test
+Info: Nothing to build for test
+17:16:09 **** Incremental Build of configuration Debug for project test ****
+Info: Internal Builder is used for build
+g++ "-IC:\\boost_1_57_0" "-IC:\\Eigen" -O0 -g3 -pg -Wall -c -fmessage-length=0 -o "src\\test.o" "..\\src\\test.cpp" 
+g++ -pg -o test.exe "src\\test.o" 
+17:16:36 **** Incremental Build of configuration Debug for project test ****
+Info: Internal Builder is used for build
+g++ "-IC:\\boost_1_57_0" "-IC:\\Eigen" -O0 -g3 -pg -Wall -c -fmessage-length=0 -o "src\\test.o" "..\\src\\test.cpp" 
+g++ -pg -o test.exe "src\\test.o" 
+Info: Nothing to build for test
+17:46:51 **** Incremental Build of configuration Debug for project test ****
+Info: Internal Builder is used for build
+g++ "-IC:\\boost_1_57_0" "-IC:\\Eigen" -O0 -g3 -pg -Wall -c -fmessage-length=0 -o "src\\test.o" "..\\src\\test.cpp" 
+g++ -pg -o test.exe "src\\test.o" 
+17:53:06 **** Incremental Build of configuration Debug for project test ****
+Info: Internal Builder is used for build
+g++ "-IC:\\boost_1_57_0" "-IC:\\Eigen" -O0 -g3 -pg -Wall -c -fmessage-length=0 -o "src\\test.o" "..\\src\\test.cpp" 
+g++ -pg -o test.exe "src\\test.o" 
+Info: Nothing to build for test
+17:58:43 **** Rebuild of configuration Debug for project test ****
+Info: Internal Builder is used for build
+g++ "-IC:\\boost_1_57_0" "-IC:\\Eigen" -O0 -g3 -pg -ftest-coverage -fprofile-arcs -Wall -c -fmessage-length=0 -o "src\\test.o" "..\\src\\test.cpp" 
+g++ -pg -ftest-coverage -fprofile-arcs -o test.exe "src\\test.o" 

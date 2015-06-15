@@ -1,0 +1,15 @@
+14:15:30 **** Incremental Build of configuration Debug for project CppO2PLS ****
+make all 
+'Building file: ../src/CppO2PLS.cpp'
+'Invoking: Cross G++ Compiler'
+g++ -I"C:\MinGW\include" -I"C:\MinGW\lib\gcc\x86_64-w64-mingw32\4.9.2\include" -I"C:\MinGW\lib\gcc\x86_64-w64-mingw32\4.9.2\include-fixed" -I"C:\MinGW\include\c++" -I"C:\MinGW\include\c++\4.9.2\backward" -I"C:\MinGW\include\c++\4.9.2\x86_64-w64-mingw32" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"src/CppO2PLS.d" -MT"src/CppO2PLS.d" -o "src/CppO2PLS.o" "../src/CppO2PLS.cpp"
+'Finished building: ../src/CppO2PLS.cpp'
+' '
+'Building target: CppO2PLS'
+'Invoking: Cross G++ Linker'
+g++  -o "CppO2PLS"  ./src/CppO2PLS.o   
+'Finished building target: CppO2PLS'
+' '
+
+14:15:31 Build Finished (took 968ms)
+
