@@ -1,7 +1,0 @@
-17:58:43 **** Rebuild of configuration Debug for project test ****
-Info: Internal Builder is used for build
-g++ "-IC:\\boost_1_57_0" "-IC:\\Eigen" -O0 -g3 -pg -ftest-coverage -fprofile-arcs -Wall -c -fmessage-length=0 -o "src\\test.o" "..\\src\\test.cpp" 
-g++ -pg -ftest-coverage -fprofile-arcs -o test.exe "src\\test.o" 
-
-17:58:56 Build Finished (took 13s.461ms)
-
