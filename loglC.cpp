@@ -30,52 +30,79 @@ Eigen::MatrixXd invUpdate(double sig, Eigen::VectorXd W)
 // ---------------- This is one of the two CORE functions
 // ---------------- It evaluates the likelihood at each step
 // [[Rcpp::export]]
-double loglC(Eigen::MatrixXd W,Eigen::MatrixXd C,Eigen::MatrixXd P_Yosc,Eigen::MatrixXd P_Xosc,Eigen::MatrixXd B_T, Eigen::MatrixXd Dat,
-             double sig2X,double sig2Y,Eigen::MatrixXd sig2H,Eigen::MatrixXd sig2T,Eigen::MatrixXd sig2To,Eigen::MatrixXd sig2Uo)
+List loglC(Eigen::MatrixXd W,Eigen::MatrixXd C,Eigen::MatrixXd P_Yosc,Eigen::MatrixXd P_Xosc,Eigen::MatrixXd B_T, Eigen::MatrixXd Dat,
+             double sig2X,double sig2Y,Eigen::MatrixXd sig2H,Eigen::MatrixXd sig2T,Eigen::MatrixXd sig2To,Eigen::MatrixXd sig2Uo,
+             double c1 = 0, double c2 = 0, double c3 = 0)
 {
   int N = Dat.rows(); // number of samples, typically of order 1e2 - 1e3 
   int p = W.rows();   // number of X variables, can be 1e1 to 1e4
   int q = C.rows();   // number of Y variables, say can be 1e1 to 1e4
-  
+  MatrixXd invS(p+q,p+q);
   // ----------- initialize, fill and invert theoretical cov of cbind(X,Y)
-  MatrixXd SX; // LARGE will be p times p
-  SX = W*sig2T*W.transpose() + P_Yosc*sig2To*P_Yosc.transpose(); // rank low
-  for(int i=0;i<p;i++){SX(i,i) += sig2X;} // add double to diagonal
-  
-  MatrixXd SY; // LARGE will be q times q
-  SY = C*sig2T*B_T*B_T*C.transpose() + C*sig2H*C.transpose() + P_Xosc*sig2Uo*P_Xosc.transpose(); //rank low
-  for(int i=0;i<q;i++){SY(i,i) += sig2Y;} // add double to diagonal
-  
-  MatrixXd SXY; // LARGE will be p times q
-  SXY = SXY = W*sig2T* B_T*C.transpose(); // only rank low
-  
-  // initialize NewSX with dimensions (p+q) times (p+q)
-  MatrixXd NewSX(SX.rows()+SY.rows(),SX.cols() + SXY.cols()); 
-  NewSX << SX,SXY,
-           SXY.transpose(),SY; // equivalent to matlab [SX SXY ; SXY' SY]
-  LLT<MatrixXd> lltSX(NewSX);   // calc cholesky decomposition (Eigen/Cholesky library)
-  
-  //Inversion step can be done maybe with "rank one update", in R I would use chol2inv()
-  MatrixXd invS = lltSX.solve(MatrixXd::Identity(p+q,p+q)); // Invert using cholesky
-  // -----------
-  
-  double som2 = (Dat.transpose()*Dat*invS).trace(); //trace of product of LARGE matrices
-  // ----- I can calc this directly I think
-  MatrixXd L = lltSX.matrixL(); 
-  MatrixXd Logdiag;
-  Logdiag = L.diagonal(); // The diagonal of L are the sqrt of the eigenvalues
-  for(int j=0;j<(p+q);j++){
-    Logdiag(j) = 2*log(Logdiag(j)); // 2*log since we need to square the sqrt(eigenval's)
+  if(c1 == 0 && c2 == 0 && c3 == 0){
+    MatrixXd SX; // LARGE will be p times p
+    SX = W*sig2T*W.transpose() + P_Yosc*sig2To*P_Yosc.transpose(); // rank low
+    for(int i=0;i<p;i++){SX(i,i) += sig2X;} // add double to diagonal
+    
+    MatrixXd SY; // LARGE will be q times q
+    SY = C*sig2T*B_T*B_T*C.transpose() + C*sig2H*C.transpose() + P_Xosc*sig2Uo*P_Xosc.transpose(); //rank low
+    for(int i=0;i<q;i++){SY(i,i) += sig2Y;} // add double to diagonal
+    
+    MatrixXd SXY; // LARGE will be p times q
+    SXY = SXY = W*sig2T* B_T*C.transpose(); // only rank low
+    
+    // initialize NewSX with dimensions (p+q) times (p+q)
+    MatrixXd NewSX(p+q,p+q); 
+    NewSX << SX,SXY,
+             SXY.transpose(),SY; // equivalent to matlab [SX SXY ; SXY' SY]
+    LLT<MatrixXd> lltSX(NewSX);   // calc cholesky decomposition (Eigen/Cholesky library)
+    
+    //Inversion step can be done maybe with "rank one update", in R I would use chol2inv()
+    invS = lltSX.solve(MatrixXd::Identity(p+q,p+q)); // Invert using cholesky
+    MatrixXd L = lltSX.matrixL(); 
+    // ----- I can calc this directly I think
+    MatrixXd Logdiag = L.diagonal(); // The diagonal of L are the sqrt of the eigenvalues
+    for(int j=0;j<(p+q);j++){
+      Logdiag(j) = 2*log(Logdiag(j)); // 2*log since we need to square the sqrt(eigenval's)
+    }
+    double som2 = 0; 
+    for(int k=0;k<N;k++){som2 += Dat.row(k) * invS * (Dat.row(k)).transpose();}
+    double Loglik = - 0.5*N*Logdiag.sum() - 0.5 * som2;
+    
+    List ret;
+    
+    ret["value"] = Loglik;
+    ret["invS"] = invS;
+    return ret;
+    
+  } else {
+    MatrixXd C1inv = -c1*W*W.transpose();for(int i=0;i<p;i++){C1inv(i,i) += 1/sig2X;}
+    MatrixXd C2inv = -c3*C*C.transpose();for(int j=0;j<q;j++){C2inv(j,j) += 1/sig2Y;}
+    
+    invS << C1inv , -c2*W*(C.transpose()),
+            -c2*C*(W.transpose()) , C2inv;
+    
+    double Logdiag = log(sig2X+sig2T(0,0)) + (p-1)*log(sig2X) + log(sig2Y + (c3*sig2Y*sig2Y / (1 - c3 * sig2Y))) + (q-1)*log(sig2Y);
+    
+    double som2 = 0; 
+    for(int k=0;k<N;k++){som2 += Dat.row(k) * invS * (Dat.row(k)).transpose();}
+    double Loglik = - 0.5*N*Logdiag - 0.5 * som2;
+    
+    List ret;
+    
+    ret["value"] = Loglik;
+    ret["invS"] = invS;
+    return ret;
   }
-  // -----
-  double Loglik = - 0.5*N*Logdiag.sum() - 0.5 * som2;
-  return Loglik;
+  // -----------
   
 }
 
 // [[Rcpp::export]]
-List EMstepC(Eigen::MatrixXd W,Eigen::MatrixXd C, Eigen::MatrixXd P_Yosc, Eigen::MatrixXd P_Xosc,Eigen::MatrixXd B_T, Eigen::MatrixXd Dat,
-            double sig2X,double sig2Y,Eigen::MatrixXd sig2H,Eigen::MatrixXd sig2T,Eigen::MatrixXd sig2To,Eigen::MatrixXd sig2Uo,bool onlyW = false)
+List EMstepC(Eigen::MatrixXd W,Eigen::MatrixXd C, Eigen::MatrixXd P_Yosc, Eigen::MatrixXd P_Xosc,
+             Eigen::MatrixXd B_T, Eigen::MatrixXd Dat,double sig2X,double sig2Y,Eigen::MatrixXd sig2H,
+             Eigen::MatrixXd sig2T,Eigen::MatrixXd sig2To,
+             Eigen::MatrixXd sig2Uo,Eigen::MatrixXd invS = Eigen::MatrixXd::Zero(1,1))
 {
   int N = Dat.rows();
   int p = W.rows();
@@ -84,29 +111,30 @@ List EMstepC(Eigen::MatrixXd W,Eigen::MatrixXd C, Eigen::MatrixXd P_Yosc, Eigen:
   int nx = P_Yosc.cols();
   int ny = P_Xosc.cols();
   
-  // copied from loglC, calc theoretical cov matrix, may be faster to reuse from loglC
-  // ----------- initialize, fill and invert theoretical cov of cbind(X,Y)
-  MatrixXd SX; // LARGE will be p times p
-  SX = W*sig2T*W.transpose() + P_Yosc*sig2To*P_Yosc.transpose(); // rank low
-  for(int i=0;i<p;i++){SX(i,i) += sig2X;} // add double to diagonal
-  
-  MatrixXd SY; // LARGE will be q times q
-  SY = C*sig2T*B_T*B_T*C.transpose() + C*sig2H*C.transpose() + P_Xosc*sig2Uo*P_Xosc.transpose(); //rank low
-  for(int i=0;i<q;i++){SY(i,i) += sig2Y;} // add double to diagonal
-  
-  MatrixXd SXY; // LARGE will be p times q
-  SXY = SXY = W*sig2T* B_T*C.transpose(); // only rank low
-  
-  // initialize NewSX with dimensions (p+q) times (p+q)
-  MatrixXd NewSX(SX.rows()+SY.rows(),SX.cols() + SXY.cols());
-  NewSX << SX,SXY,
-           SXY.transpose(),SY; // equivalent to matlab [SX SXY ; SXY' SY]
-  LLT<MatrixXd> lltSX(NewSX);   // calc cholesky decomposition (Eigen/Cholesky library)
-  
-  //Inversion step can be done maybe with "rank one update", in R I would use chol2inv()
-  MatrixXd invS = lltSX.solve(MatrixXd::Identity(p+q,p+q)); // Invert using cholesky
-  // -----------
-  
+  if( invS(0,0) == 0 ){
+    // copied from loglC, calc theoretical cov matrix, may be faster to reuse from loglC
+    // ----------- initialize, fill and invert theoretical cov of cbind(X,Y)
+    MatrixXd SX; // LARGE will be p times p
+    SX = W*sig2T*W.transpose() + P_Yosc*sig2To*P_Yosc.transpose(); // rank low
+    for(int i=0;i<p;i++){SX(i,i) += sig2X;} // add double to diagonal
+    
+    MatrixXd SY; // LARGE will be q times q
+    SY = C*sig2T*B_T*B_T*C.transpose() + C*sig2H*C.transpose() + P_Xosc*sig2Uo*P_Xosc.transpose(); //rank low
+    for(int i=0;i<q;i++){SY(i,i) += sig2Y;} // add double to diagonal
+    
+    MatrixXd SXY; // LARGE will be p times q
+    SXY = SXY = W*sig2T* B_T*C.transpose(); // only rank low
+    
+    // initialize NewSX with dimensions (p+q) times (p+q)
+    MatrixXd NewSX(SX.rows()+SY.rows(),SX.cols() + SXY.cols());
+    NewSX << SX,SXY,
+             SXY.transpose(),SY; // equivalent to matlab [SX SXY ; SXY' SY]
+    LLT<MatrixXd> lltSX(NewSX);   // calc cholesky decomposition (Eigen/Cholesky library)
+    
+    //Inversion step can be done maybe with "rank one update", in R I would use chol2inv()
+    invS = lltSX.solve(MatrixXd::Identity(p+q,p+q)); // Invert using cholesky
+    // -----------
+  }
    // // // // //  Expectations------------------------------------------------------------------------------
    MatrixXd Cxxyy = Dat.transpose()*Dat / N;
    MatrixXd Cxx = Cxxyy.topLeftCorner(p, p);
@@ -180,16 +208,16 @@ List EMstepC(Eigen::MatrixXd W,Eigen::MatrixXd C, Eigen::MatrixXd P_Yosc, Eigen:
    
    List ret;
    ret["Cxt"] = Cxt;
-   ret["Cxto"] = onlyW*Cxto;
+   ret["Cxto"] = Cxto;
    ret["Ctt"] = Ctt;
-   ret["Ctto"] = onlyW*Ctto;
-   ret["Ctoto"] = onlyW*Ctoto;
+   ret["Ctto"] = Ctto;
+   ret["Ctoto"] = Ctoto;
    
    ret["Cyu"] = Cyu;
-   ret["Cyuo"] = onlyW*Cyuo;
+   ret["Cyuo"] = Cyuo;
    ret["Cuu"] = Cuu;
-   ret["Cuuo"] = onlyW*Cuuo;
-   ret["Cuouo"] = onlyW*Cuouo;
+   ret["Cuuo"] = Cuuo;
+   ret["Cuouo"] = Cuouo;
    
    ret["Cut"] = Cut;
    

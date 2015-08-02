@@ -1,18 +1,16 @@
-
-##################################################################################
-##################################################################################
-##################################################################################
-source('preambleCpp.R')
-dens= mvrnorm
-K=100
-EMsteps=500
+source('functions.R')
+library(RcppEigen)
+library(O2PLS)
+#dens= mvrnorm
+#K=100
+#EMsteps=500
 
 set.seed(890)
 N=1000
-p=60;q=50
+p=6;q=5
 alp = 0.05
 
-a = 2;
+a = 1;
 a2 = b2 = 1;
 
 #set.seed(2014)
@@ -29,29 +27,37 @@ sigX = .05#sqrt(alp/(1-alp)*(a*sigT^2+a2*sigTo^2)/p) #approx 5% var wrt X
 sigH = .05#sqrt(c(B_T^2*sigT^2))          #approx 5% var wrt U
 sigY = .05#%sqrt(alp/(1-alp)*(a*c(B_T^2)*sigT^2+a*sigH^2+b2*sigUo^2)/q) #approx 5% var wrt X
 
+g = sigT[1]^2*B_T[1]^2 + sigH^2
+Kw = sigT[1]^2 - sigT[1]^4*B_T[1]^2/sigY^2 + sigT[1]^4*B_T[1]^2*g/(sigY^2*(g+sigY^2))
+Kc = g - sigT[1]^4*B_T[1]^2/sigX^2 + sigT[1]^6*B_T[1]^2/(sigX^2*(sigT[1]^2+sigX^2))
+Kwc = sigT[1]^2*B_T[1]/(sigX^2*sigY^2) - Kc*sigT[1]^2*B_T[1]/(sigX^2*sigY^2*(Kc+sigY^2)) - 
+          sigT[1]^4*B_T[1]/(sigX^2*sigY^2*(sigT[1]^2+sigX^2)) + 
+          Kc*sigT[1]^4*B_T[1]/(sigX^2*sigY^2*(Kc+sigY^2)*(sigT[1]^2+sigX^2))
+c1 = Kw / (sigX^2*(Kw + sigX^2)); c3 = Kc / (sigY^2*(Kc + sigY^2));
+
 #Est = list()
 
 #tic=proc.time();
 #for(ind_i in 1:K){
-Dat = simulC(N,W,C,PYo,PXo,c(B_T),sigX,sigY,sigH,sigT[1],sigTo[1],sigUo[1]);
+Dat = simulC(N,W,C,PYo,PXo,B_T,sigX,sigY,diag(sigH,a),sigT,0*sigTo,sigUo);
 X = Dat[,1:p]
 Y = Dat[,-(1:p)]
 
-Tt  = matrix(scale(rnorm(N*a)),N,a)%*%sigT
-TYo = matrix(scale(rnorm(N*a2)),N,a2)%*%sigTo
-UXo = matrix(scale(rnorm(N*b2)),N,b2)%*%sigUo
-#  E   = matrix(sigX*rnorm(N*p),N,p)
-E   = sigX*matrix(scale(rnorm(N*p)),N,p)
-#  Ff  = matrix(sigY*rnorm(N*q),N,q)#
-Ff  = sigY*matrix(scale(rnorm(N*q)),N,q)
-H_UT = sigH*matrix(scale(rnorm(N*a)),N,a)
-
-## To model ###
-U = Tt %*% B_T
-U = U + H_UT
-X = tcrossprod(Tt,W) + E #+ tcrossprod(TYo,PYo)
-Y = tcrossprod(U,C) + Ff #+ tcrossprod(UXo,PXo) 
-Dat = cbind(X,Y)
+# Tt  = matrix(scale(rnorm(N*a)),N,a)%*%sigT
+# TYo = matrix(scale(rnorm(N*a2)),N,a2)%*%sigTo
+# UXo = matrix(scale(rnorm(N*b2)),N,b2)%*%sigUo
+# #  E   = matrix(sigX*rnorm(N*p),N,p)
+# E   = sigX*matrix(scale(rnorm(N*p)),N,p)
+# #  Ff  = matrix(sigY*rnorm(N*q),N,q)#
+# Ff  = sigY*matrix(scale(rnorm(N*q)),N,q)
+# H_UT = sigH*matrix(scale(rnorm(N*a)),N,a)
+# 
+# ## To model ###
+# U = Tt %*% B_T
+# U = U + H_UT
+# X = tcrossprod(Tt,W) + E #+ tcrossprod(TYo,PYo)
+# Y = tcrossprod(U,C) + Ff #+ tcrossprod(UXo,PXo) 
+# Dat = cbind(X,Y)
 
 #ret = list(W=c(W),C=c(C),PYo=c(PYo),PXo=c(PXo),B=B_T,sig=c(sigX^2,sigY^2,sigH^2,sigT^2,sigTo^2,sigUo^2));
 #ret = list(W=orth(runif(p)),C=orth(runif(q)),PYo=orth(runif(p)),PXo=orth(runif(q)),B=rchisq(1,1),sig=c(orth(rchisq(6,1))));
