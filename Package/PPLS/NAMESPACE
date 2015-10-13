@@ -1,7 +1,7 @@
 useDynLib(PPLS)
 import(O2PLS)
+import(Rcpp)
 import(RcppEigen)
-importFrom(Rcpp, evalCpp)
 exportPattern("^[[:alpha:]]+")
 
 
