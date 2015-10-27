@@ -17,26 +17,26 @@
 #' @name PPLS
 #' @keywords Probabilistic-PLS
 #' @import Rcpp
+#' @import ggplot2
 #' @import RcppEigen
 #' @import O2PLS
 NULL
 
 #' Performs one EM step
 #'
-#' @param W Numeric matrix.
-#' @param C Numeric matrix.
-#' @param B_T Numeric matrix.
 #' @param X Numeric matrix.
 #' @param Y Numeric matrix.
-#' @param sigX Numeric matrix.
-#' @param sigY Numeric matrix.
-#' @param sigH Numeric matrix.
-#' @param sigT Numeric matrix.
-#' @param invS Numeric matrix.
+#' @param W. Numeric matrix.
+#' @param C. Numeric matrix.
+#' @param B_T. Numeric
+#' @param sigX. Numeric
+#' @param sigY. Numeric
+#' @param sigH. Numeric
+#' @param sigT. Numeric
 #' @return A list with updated values for\itemize{
-#'    \item{What}{Matrix}
-#'    \item{Chat}{Matrix}
-#'    \item{Bhat}{Matrix}
+#'    \item{W}{Matrix}
+#'    \item{C}{Matrix}
+#'    \item{B}{Matrix}
 #'    \item{sighat}{Vector containing updated sigX and sigY}
 #'    \item{siglathat}{Vector containing sigH and sigT}
 #'  }
@@ -76,7 +76,7 @@ EMstep_W <- function(X , Y , W.=W, C.=C, B_T.=B_T,
 #' @param Y Numeric matrix.
 #' @param EMsteps strictly positive integer. Denotes the maximum number of EM steps to make.
 #' @param atol Double, convergence criterium for the log-likelihood
-#' @param ret A string denoting with type of initial guess to use. o2m == PLS initial guess, random == random initial guess and uniform = equal loadings initial guess.
+#' @param initialGuess A string. Choose "o2m", "random" or "equal" depending on what type of initial guess you want.
 #' @param critfunc Function measuring the increment value, i.e. f(L_{i+1} - L_{i}). Usually f == I or f == abs.
 #' @param print_logvalue Logical. Should we print log-likelihood values for each step?
 #' @return A list with estimates for\itemize{
@@ -148,7 +148,7 @@ PPLSi <- function(X,Y,EMsteps=1e2,atol=1e-4,initialGuess=c("o2m","random","equal
 #' @param nr_comp Strictly positive integer. The number of PPLS components to fit.
 #' @param EMsteps strictly positive integer. Denotes the maximum number of EM steps to make.
 #' @param atol Double, convergence criterium for the log-likelihood
-#' @param ret A string denoting with type of initial guess to use. o2m == PLS initial guess, random == random initial guess and uniform = equal loadings initial guess.
+#' @param initialGuess A string. Choose "o2m", "random" or "equal" depending on what type of initial guess you want.
 #' @param critfunc Function measuring the increment value, i.e. f(L_{i+1} - L_{i}). Usually f == I or f == abs.
 #' @param print_logvalue Logical. Should we print log-likelihood values for each step?
 #' @return A list with estimates for\itemize{
@@ -206,27 +206,20 @@ PPLS <- function(X,Y,nr_comp=1,EMsteps=1e2,atol=1e-4,initialGuess=c("equal","o2m
   return(ret2)
 }
 
-#' Performs loglikelihood.
+#' Calculates loglikelihood for PPLS model.
 #'
-#' @param W Numeric matrix.
-#' @param C Numeric matrix.
-#' @param B_T Numeric matrix.
 #' @param X Numeric matrix.
 #' @param Y Numeric matrix.
-#' @param sigX Numeric matrix.
-#' @param sigY Numeric matrix.
-#' @param sigH Numeric matrix.
-#' @param sigT Numeric matrix.
-#' @param invS Numeric matrix.
-#' @return A list with updated values for\itemize{
-#'    \item{What}{Matrix}
-#'    \item{Chat}{Matrix}
-#'    \item{Bhat}{Matrix}
-#'    \item{sighat}{Vector containing updated sigX and sigY}
-#'    \item{siglathat}{Vector containing sigH and sigT}
-#'  }
-#' @details This function passes its arguments to EMstepC (a C++ function, see \link{Rcpp}), which returns the expected sufficient statistics.
-#' The maximization is done afterwards in this function. This may become a full C++ function later.
+#' @param W. Numeric matrix.
+#' @param C. Numeric matrix.
+#' @param B_T. Numeric matrix.
+#' @param sigX. Numeric matrix.
+#' @param sigY. Numeric matrix.
+#' @param sigH. Numeric matrix.
+#' @param sigT. Numeric matrix.
+#' @return The log-likelihood (i.e. scalar) of the parameters given the observed data.
+#'
+#' @details This function passes its arguments to LoglC_fast (a C++ function, see \link{Rcpp}).
 #'
 #' @export
 logl_W <- function(X , Y , W.=W, C.=C, B_T.=B_T,
@@ -255,4 +248,91 @@ logl_W <- function(X , Y , W.=W, C.=C, B_T.=B_T,
   c2 = Kwc
 
   return(loglC_fast(W.,C.,X,Y,sigX.,sigY.,diag(sigT.)^2,diag(c1),diag(c2),diag(c3),diag(Kc)))
+}
+
+#' Print function for class PPLS.
+#'
+#' @param x A PPLS fit (an object of class PPLS)
+#' @param perc Display relative percentages yes/no?
+#' @param ... For consistency
+#' @return Invisible, the outputted table
+#'
+#' @details This function shows the absolute/relative variances of each component.
+#'
+#' @export
+print.PPLS <- function (x,perc=FALSE,...)
+{
+
+  p = nrow(x$W)
+  q = nrow(x$C)
+  outp = sapply(1:nrow(x$sig), function(i) {
+    with(x, {
+      c(i,sum(sig[1:i, 4]^2)/(perc*(sum(sig[1:i, 4]^2) + p * x$sig[i, 1]^2) + (1 - perc)),
+        sum(sig[1:i,4]^2 * B[1:i]^2 + sig[i, 3]^2)/(perc * (sum(sig[1:i,4]^2 * B[1:i]^2 + sig[i, 3]^2) + q * sig[i, 2]^2) +(1 - perc)),
+        sig[i, 3]^2, c(0, diff(x$Oth$Log))[i],x$Oth$Nu[i], signif(x$Oth$Last[i], 3))
+    })
+  })
+  outp = as.data.frame(t(outp))
+  names(outp) = c("LV", ifelse(perc, "ssq(T)/ssq(X)", "ssq(T)"),
+                  ifelse(perc, "ssq(U)/ssq(Y)", "ssq(U)"), "sigma_H", "log LR",
+                  "#steps", "last incr")
+  print(outp)
+  return(invisible(outp))
+}
+
+#' Plot function for class PPLS.
+#'
+#' @param x A PPLS fit (an object of class PPLS)
+#' @param XorY Plot scores and loadings for X or Y?
+#' @param i Positive integer. The i-th loading/score will be plotted on the first axis
+#' @param j Positive integer. The j-th loading/score will be plotted on the second axis
+#' @param use_ggplot2 Logical. Use ggplot2?
+#' @param ... For consistency
+#' @return If ggplot2 is active, returns the ggplot object. Else NULL.
+#'
+#' @details This function plots two loadings/scores.
+#'
+#' @export
+plot.PPLS <- function (x, XorY = c("X", "Y"), i = 1, j = 2, use_ggplot2=TRUE,...)
+{
+  p = nrow(x$W)
+  XorY = match.arg(XorY)
+  if (use_ggplot2) {
+    plt = with(x, qplot(x = W[, i], y = W[, j], label = 1:p,
+                          geom = "text", xlab = paste("W", i), ylab = paste("W",j)))
+    plt = plt + geom_vline(xintercept = 0) + geom_hline(yintercept = 0)
+    print(plt)
+    return(plt)
+  }
+  else {
+    with(x, {
+      plot(W[, i], W[, j], type = "n")
+      text(W[, i], W[, j])
+    })
+    lines((2/sqrt(p) + 2/p) * cos(seq(0, 2 * pi, length.out = 1000)),
+          (2/sqrt(p) + 2/p) * sin(seq(0, 2 * pi, length.out = 1000)))
+  }
+  return(invisible(NULL))
+}
+
+#' Get scores from PPLS fit.
+#'
+#' @param fit A PPLS fit (an object of class PPLS)
+#' @param X Matrix
+#' @param Y Matrix
+#' @param subset vector of positive integers denoting with components you want.
+#' @return Both the X and Y scores concatenated.
+#'
+#' @details This function plots two loadings/scores.
+#'
+#' @export
+scores.PPLS <- function (fit, X, Y, subset = NULL)
+{
+  if (is.null(subset)) {
+    subset = 1:ncol(fit$W)
+  }
+  if (length(subset) == 1) {
+    return(c(X %*% fit$W[, subset], Y %*% fit$C[, subset]))
+  }
+  return(rbind(X %*% fit$W[, subset], Y %*% fit$C[, subset]))
 }

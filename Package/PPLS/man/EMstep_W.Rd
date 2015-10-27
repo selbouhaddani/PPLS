@@ -12,27 +12,25 @@ EMstep_W(X, Y, W. = W, C. = C, B_T. = B_T, sigX. = sigX, sigY. = sigY,
 
 \item{Y}{Numeric matrix.}
 
-\item{W}{Numeric matrix.}
+\item{W.}{Numeric matrix.}
 
-\item{C}{Numeric matrix.}
+\item{C.}{Numeric matrix.}
 
-\item{B_T}{Numeric matrix.}
+\item{B_T.}{Numeric}
 
-\item{sigX}{Numeric matrix.}
+\item{sigX.}{Numeric}
 
-\item{sigY}{Numeric matrix.}
+\item{sigY.}{Numeric}
 
-\item{sigH}{Numeric matrix.}
+\item{sigH.}{Numeric}
 
-\item{sigT}{Numeric matrix.}
-
-\item{invS}{Numeric matrix.}
+\item{sigT.}{Numeric}
 }
 \value{
 A list with updated values for\itemize{
-   \item{What}{Matrix}
-   \item{Chat}{Matrix}
-   \item{Bhat}{Matrix}
+   \item{W}{Matrix}
+   \item{C}{Matrix}
+   \item{B}{Matrix}
    \item{sighat}{Vector containing updated sigX and sigY}
    \item{siglathat}{Vector containing sigH and sigT}
  }

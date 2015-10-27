@@ -2,7 +2,7 @@
 % Please edit documentation in R/EM_W_multi.R
 \name{logl_W}
 \alias{logl_W}
-\title{Performs loglikelihood.}
+\title{Calculates loglikelihood for PPLS model.}
 \usage{
 logl_W(X, Y, W. = W, C. = C, B_T. = B_T, sigX. = sigX, sigY. = sigY,
   sigH. = sigH, sigT. = sigT)
@@ -12,36 +12,27 @@ logl_W(X, Y, W. = W, C. = C, B_T. = B_T, sigX. = sigX, sigY. = sigY,
 
 \item{Y}{Numeric matrix.}
 
-\item{W}{Numeric matrix.}
+\item{W.}{Numeric matrix.}
 
-\item{C}{Numeric matrix.}
+\item{C.}{Numeric matrix.}
 
-\item{B_T}{Numeric matrix.}
+\item{B_T.}{Numeric matrix.}
 
-\item{sigX}{Numeric matrix.}
+\item{sigX.}{Numeric matrix.}
 
-\item{sigY}{Numeric matrix.}
+\item{sigY.}{Numeric matrix.}
 
-\item{sigH}{Numeric matrix.}
+\item{sigH.}{Numeric matrix.}
 
-\item{sigT}{Numeric matrix.}
-
-\item{invS}{Numeric matrix.}
+\item{sigT.}{Numeric matrix.}
 }
 \value{
-A list with updated values for\itemize{
-   \item{What}{Matrix}
-   \item{Chat}{Matrix}
-   \item{Bhat}{Matrix}
-   \item{sighat}{Vector containing updated sigX and sigY}
-   \item{siglathat}{Vector containing sigH and sigT}
- }
+The log-likelihood (i.e. scalar) of the parameters given the observed data.
 }
 \description{
-Performs loglikelihood.
+Calculates loglikelihood for PPLS model.
 }
 \details{
-This function passes its arguments to EMstepC (a C++ function, see \link{Rcpp}), which returns the expected sufficient statistics.
-The maximization is done afterwards in this function. This may become a full C++ function later.
+This function passes its arguments to LoglC_fast (a C++ function, see \link{Rcpp}).
 }
 

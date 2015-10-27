@@ -5,7 +5,6 @@
 #'
 #' @param X Numeric matrix.
 #' @return ...
-#' @export
 loglC <- function(W, C, P_Yosc, P_Xosc, B_T, Dat, sigX, sigY, sigH, sigT, sigTo, sigUo, c1 = 0, c2 = 0, c3 = 0) {
     .Call('PPLS_loglC', PACKAGE = 'PPLS', W, C, P_Yosc, P_Xosc, B_T, Dat, sigX, sigY, sigH, sigT, sigTo, sigUo, c1, c2, c3)
 }
@@ -14,7 +13,6 @@ loglC <- function(W, C, P_Yosc, P_Xosc, B_T, Dat, sigX, sigY, sigH, sigT, sigTo,
 #'
 #' @param X Numeric matrix.
 #' @return ...
-#' @export
 EMstepC <- function(W, C, P_Yosc, P_Xosc, B_T, Dat, sigX, sigY, sigH, sigT, sigTo, sigUo, invS = matrixXd::Zero(1,1)) {
     .Call('PPLS_EMstepC', PACKAGE = 'PPLS', W, C, P_Yosc, P_Xosc, B_T, Dat, sigX, sigY, sigH, sigT, sigTo, sigUo, invS)
 }
@@ -23,7 +21,6 @@ EMstepC <- function(W, C, P_Yosc, P_Xosc, B_T, Dat, sigX, sigY, sigH, sigT, sigT
 #'
 #' @param X Numeric matrix.
 #' @return ...
-#' @export
 simulC <- function(N, W, C, P_Yosc, P_Xosc, B_T, sigX, sigY, sigH, sigT, sigTo, sigUo) {
     .Call('PPLS_simulC', PACKAGE = 'PPLS', N, W, C, P_Yosc, P_Xosc, B_T, sigX, sigY, sigH, sigT, sigTo, sigUo)
 }
@@ -32,7 +29,6 @@ simulC <- function(N, W, C, P_Yosc, P_Xosc, B_T, sigX, sigY, sigH, sigT, sigTo, 
 #'
 #' @param X Numeric matrix.
 #' @return ...
-#' @export
 loglC_fast <- function(W, C, X, Y, sigX, sigY, sig2T, c1, c2, c3, Kc) {
     .Call('PPLS_loglC_fast', PACKAGE = 'PPLS', W, C, X, Y, sigX, sigY, sig2T, c1, c2, c3, Kc)
 }
@@ -41,7 +37,6 @@ loglC_fast <- function(W, C, X, Y, sigX, sigY, sig2T, c1, c2, c3, Kc) {
 #'
 #' @param X Numeric matrix.
 #' @return ...
-#' @export
 EMstepC_fast <- function(W, C, B, X, Y, sigX, sigY, sigH, sigT, c1, c2, c3) {
     .Call('PPLS_EMstepC_fast', PACKAGE = 'PPLS', W, C, B, X, Y, sigX, sigY, sigH, sigT, c1, c2, c3)
 }

@@ -21,11 +21,11 @@ PPLS(X, Y, nr_comp = 1, EMsteps = 100, atol = 1e-04,
 
 \item{atol}{Double, convergence criterium for the log-likelihood}
 
+\item{initialGuess}{A string. Choose "o2m", "random" or "equal" depending on what type of initial guess you want.}
+
 \item{critfunc}{Function measuring the increment value, i.e. f(L_{i+1} - L_{i}). Usually f == I or f == abs.}
 
 \item{print_logvalue}{Logical. Should we print log-likelihood values for each step?}
-
-\item{ret}{A string denoting with type of initial guess to use. o2m == PLS initial guess, random == random initial guess and uniform = equal loadings initial guess.}
 }
 \value{
 A list with estimates for\itemize{

@@ -1,12 +1,12 @@
 Package: PPLS
 Type: Package
 Title: Probabilistic Partial Least Squares
-Version: 0.2.7
+Version: 0.2.8
 Date: 2015-11-13
 Author: Said el Bouhaddani
 Maintainer: Said el Bouhaddani <s.el_bouhaddani@lumc.nl>
-Description: Implements PPLS
-License: GNU GENERAL PUBLIC LICENSE
+Description: This package implements the Partial Least Squares method in a probabilistic framework. Just do PPLS(Datamatrix_1,Datamatrix_2,nr_of_components) to have a quick and dirty fit, modify the default arguments if necessary.
+License: GPL-3
 LazyData: TRUE
-Imports: Rcpp (>= 0.11.4), RcppEigen (>= 0.3.2.3.0), O2PLS
+Imports: Rcpp (>= 0.11.4), RcppEigen (>= 0.3.2.3.0), O2PLS, ggplot2
 LinkingTo: Rcpp, RcppEigen

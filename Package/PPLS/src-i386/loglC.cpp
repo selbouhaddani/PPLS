@@ -36,7 +36,6 @@ Eigen::MatrixXd invUpdate(double sig, Eigen::VectorXd W)
 //'
 //' @param X Numeric matrix.
 //' @return ...
-//' @export
 // [[Rcpp::export]]
 List loglC(Eigen::MatrixXd W,Eigen::MatrixXd C,Eigen::MatrixXd P_Yosc,Eigen::MatrixXd P_Xosc,Eigen::MatrixXd B_T, Eigen::MatrixXd Dat,
              double sigX,double sigY,double sigH,Eigen::MatrixXd sigT,Eigen::MatrixXd sigTo,Eigen::MatrixXd sigUo,
@@ -120,7 +119,6 @@ List loglC(Eigen::MatrixXd W,Eigen::MatrixXd C,Eigen::MatrixXd P_Yosc,Eigen::Mat
 //'
 //' @param X Numeric matrix.
 //' @return ...
-//' @export
 // [[Rcpp::export]]
 List EMstepC(Eigen::MatrixXd W,Eigen::MatrixXd C, Eigen::MatrixXd P_Yosc, Eigen::MatrixXd P_Xosc,
              Eigen::MatrixXd B_T, Eigen::MatrixXd Dat,double sigX,double sigY,double sigH,
@@ -261,7 +259,6 @@ List EMstepC(Eigen::MatrixXd W,Eigen::MatrixXd C, Eigen::MatrixXd P_Yosc, Eigen:
 //'
 //' @param X Numeric matrix.
 //' @return ...
-//' @export
 // [[Rcpp::export]]
 Eigen::MatrixXd simulC(int N, Eigen::MatrixXd W,Eigen::MatrixXd C, Eigen::MatrixXd P_Yosc, Eigen::MatrixXd P_Xosc,Eigen::MatrixXd B_T,
                        double sigX,double sigY,double sigH,Eigen::MatrixXd sigT,Eigen::MatrixXd sigTo,Eigen::MatrixXd sigUo)
@@ -315,7 +312,6 @@ Eigen::MatrixXd simulC(int N, Eigen::MatrixXd W,Eigen::MatrixXd C, Eigen::Matrix
 //'
 //' @param X Numeric matrix.
 //' @return ...
-//' @export
 // [[Rcpp::export]]
 double loglC_fast(Eigen::MatrixXd W,Eigen::MatrixXd C,Eigen::MatrixXd X, Eigen::MatrixXd Y,
            double sigX,double sigY,Eigen::VectorXd sig2T,
@@ -342,7 +338,6 @@ double loglC_fast(Eigen::MatrixXd W,Eigen::MatrixXd C,Eigen::MatrixXd X, Eigen::
 //'
 //' @param X Numeric matrix.
 //' @return ...
-//' @export
 // [[Rcpp::export]]
 List EMstepC_fast(Eigen::VectorXd W,Eigen::VectorXd C,double B,
                   Eigen::MatrixXd X, Eigen::MatrixXd Y,double sigX,double sigY,double sigH,double sigT,double c1, double c2, double c3)
