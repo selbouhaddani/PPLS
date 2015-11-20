@@ -259,6 +259,7 @@ List EMstepC(Eigen::MatrixXd W,Eigen::MatrixXd C, Eigen::MatrixXd P_Yosc, Eigen:
 //'
 //' @param X Numeric matrix.
 //' @return ...
+//' @export
 // [[Rcpp::export]]
 Eigen::MatrixXd simulC(int N, Eigen::MatrixXd W,Eigen::MatrixXd C, Eigen::MatrixXd P_Yosc, Eigen::MatrixXd P_Xosc,Eigen::MatrixXd B_T,
                        double sigX,double sigY,double sigH,Eigen::MatrixXd sigT,Eigen::MatrixXd sigTo,Eigen::MatrixXd sigUo)

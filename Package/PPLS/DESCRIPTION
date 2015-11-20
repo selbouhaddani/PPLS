@@ -5,8 +5,16 @@ Version: 0.2.8
 Date: 2015-11-13
 Author: Said el Bouhaddani
 Maintainer: Said el Bouhaddani <s.el_bouhaddani@lumc.nl>
-Description: This package implements the Partial Least Squares method in a probabilistic framework. Just do PPLS(Datamatrix_1,Datamatrix_2,nr_of_components) to have a quick and dirty fit, modify the default arguments if necessary.
+Description: This package implements the Partial Least
+    Squares method in a probabilistic framework. Just do
+    PPLS(Datamatrix_1,Datamatrix_2,nr_of_components) to have a quick and dirty fit,
+    modify the default arguments if necessary.
 License: GPL-3
 LazyData: TRUE
-Imports: Rcpp (>= 0.11.4), RcppEigen (>= 0.3.2.3.0), O2PLS, ggplot2
+Imports:
+    Rcpp (>= 0.11.4),
+    RcppEigen (>= 0.3.2.3.0),
+    O2PLS,
+    ggplot2
 LinkingTo: Rcpp, RcppEigen
+RoxygenNote: 5.0.0

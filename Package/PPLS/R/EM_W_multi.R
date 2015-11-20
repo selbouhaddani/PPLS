@@ -202,7 +202,7 @@ PPLS <- function(X,Y,nr_comp=1,EMsteps=1e2,atol=1e-4,initialGuess=c("equal","o2m
     other_output$Loglikelihoods[i] = logl_W(X,Y,Wn[,1:i],Cn[,1:i],diag(Bn,i),sigXn[i],sigYn[i],sigHn[i],diag(sigTn[1:i],i))
   }
   ret2 = list( W=Wn,C=Cn,B=Bn,sig=cbind(sigX=sigXn,sigY=sigYn,sigH=sigHn,sigT=sigTn),Other_output=other_output)
-
+  class(ret2) <- "PPLS"
   return(ret2)
 }
 
@@ -262,14 +262,14 @@ logl_W <- function(X , Y , W.=W, C.=C, B_T.=B_T,
 #' @export
 print.PPLS <- function (x,perc=FALSE,...)
 {
-
   p = nrow(x$W)
   q = nrow(x$C)
   outp = sapply(1:nrow(x$sig), function(i) {
     with(x, {
       c(i,sum(sig[1:i, 4]^2)/(perc*(sum(sig[1:i, 4]^2) + p * x$sig[i, 1]^2) + (1 - perc)),
         sum(sig[1:i,4]^2 * B[1:i]^2 + sig[i, 3]^2)/(perc * (sum(sig[1:i,4]^2 * B[1:i]^2 + sig[i, 3]^2) + q * sig[i, 2]^2) +(1 - perc)),
-        sig[i, 3]^2, c(0, diff(x$Oth$Log))[i],x$Oth$Nu[i], signif(x$Oth$Last[i], 3))
+        sig[i, 3]^2 / (perc*(sig[1:i,4]^2 * B[1:i]^2 + sig[i, 3]^2) + (1-perc)),
+        c(0, diff(x$Oth$Log))[i],x$Oth$Nu[i], signif(x$Oth$Last[i], 3))
     })
   })
   outp = as.data.frame(t(outp))
@@ -283,7 +283,7 @@ print.PPLS <- function (x,perc=FALSE,...)
 #' Plot function for class PPLS.
 #'
 #' @param x A PPLS fit (an object of class PPLS)
-#' @param XorY Plot scores and loadings for X or Y?
+#' @param XorY Plot loadings for X or Y?
 #' @param i Positive integer. The i-th loading/score will be plotted on the first axis
 #' @param j Positive integer. The j-th loading/score will be plotted on the second axis
 #' @param use_ggplot2 Logical. Use ggplot2?
@@ -293,26 +293,34 @@ print.PPLS <- function (x,perc=FALSE,...)
 #' @details This function plots two loadings/scores.
 #'
 #' @export
-plot.PPLS <- function (x, XorY = c("X", "Y"), i = 1, j = 2, use_ggplot2=TRUE,...)
+plot.PPLS <- function (x, XorY = c("X", "Y"), i = 1, j = NULL, use_ggplot2=TRUE,...)
 {
-  p = nrow(x$W)
+  fit = list()
   XorY = match.arg(XorY)
+  if(XorY == "X"){fit$load = x$W[,c(i,j)]}else{fit$load = x$C[,c(i,j)]}
+  p = nrow(as.matrix(fit$load))
+  if(is.null(j)){
+    fit$load = cbind(1:p,fit$load)
+    colnames(fit$load) = c("index",paste("loadings",i))
+  }else{
+    colnames(fit$load) = c(paste("loadings",i),paste("loadings",j))
+  }
   if (use_ggplot2) {
-    plt = with(x, qplot(x = W[, i], y = W[, j], label = 1:p,
-                          geom = "text", xlab = paste("W", i), ylab = paste("W",j)))
+    plt = with(fit, qplot(x = load[, 1], y = load[, 2], label = 1:p,
+                          geom = "text", xlab = colnames(load)[1], ylab = colnames(load)[2]))
     plt = plt + geom_vline(xintercept = 0) + geom_hline(yintercept = 0)
     print(plt)
     return(plt)
   }
   else {
-    with(x, {
-      plot(W[, i], W[, j], type = "n")
-      text(W[, i], W[, j])
+    with(fit, {
+      plot(load[, 1], load[, 2], type = "n")
+      text(load[, 1], load[, 2])
     })
-    lines((2/sqrt(p) + 2/p) * cos(seq(0, 2 * pi, length.out = 1000)),
-          (2/sqrt(p) + 2/p) * sin(seq(0, 2 * pi, length.out = 1000)))
+    abline(v=0,h=0)
+    #lines((2/sqrt(p) + 2/p) * cos(seq(0, 2 * pi, length.out = 1000)),
+    #      (2/sqrt(p) + 2/p) * sin(seq(0, 2 * pi, length.out = 1000)))
   }
-  return(invisible(NULL))
 }
 
 #' Get scores from PPLS fit.

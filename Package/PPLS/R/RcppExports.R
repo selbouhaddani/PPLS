@@ -21,6 +21,7 @@ EMstepC <- function(W, C, P_Yosc, P_Xosc, B_T, Dat, sigX, sigY, sigH, sigT, sigT
 #'
 #' @param X Numeric matrix.
 #' @return ...
+#' @export
 simulC <- function(N, W, C, P_Yosc, P_Xosc, B_T, sigX, sigY, sigH, sigT, sigTo, sigUo) {
     .Call('PPLS_simulC', PACKAGE = 'PPLS', N, W, C, P_Yosc, P_Xosc, B_T, sigX, sigY, sigH, sigT, sigTo, sigUo)
 }
