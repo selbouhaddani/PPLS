@@ -7,8 +7,8 @@
 \title{PPLS: Probabilistic Partial Least Squares}
 \usage{
 PPLS(X, Y, nr_comp = 1, EMsteps = 100, atol = 1e-04,
-  initialGuess = c("equal", "o2m", "random"), critfunc = function(x) {     x
-  }, print_logvalue = FALSE)
+  initialGuess = c("equal", "o2m", "random", "custom"), customGuess = NULL,
+  critfunc = function(x) {     x }, print_logvalue = FALSE)
 }
 \arguments{
 \item{X}{Numeric matrix.}
@@ -23,17 +23,19 @@ PPLS(X, Y, nr_comp = 1, EMsteps = 100, atol = 1e-04,
 
 \item{initialGuess}{A string. Choose "o2m", "random" or "equal" depending on what type of initial guess you want.}
 
+\item{customGuess}{A list with named components W,C,B,sigE,sigF,sigH,sigT.}
+
 \item{critfunc}{Function measuring the increment value, i.e. f(L_{i+1} - L_{i}). Usually f == I or f == abs.}
 
 \item{print_logvalue}{Logical. Should we print log-likelihood values for each step?}
 }
 \value{
 A list with estimates for\itemize{
-   \item{W}{Matrix, each column is a fit.}
-   \item{C}{Matrix, each column is a fit.}
-   \item{B}{Matrix, each column is a fit.}
-   \item{sig}{Matrix containing updated sigX, sigY, sigH and sigT. Columns are named.}
-   \item{Other_output}{\itemize{
+   \item{W }{Matrix, each column is a fit.}
+   \item{C }{Matrix, each column is a fit.}
+   \item{B }{Matrix, each column is a fit.}
+   \item{sig }{Matrix containing updated sigX, sigY, sigH and sigT. Columns are named.}
+   \item{Other_output }{\itemize{
          \item{Last_increment}{.}
          \item{Number_steps}{.}
          \item{Loglikelihoods}{.}
@@ -44,10 +46,15 @@ A list with estimates for\itemize{
 \description{
 This package implements the Partial Least Squares method in a probabilistic framework.
 
-Performs PPLS fit in sequentially multiple directions.
+Performs PPLS fit.
 }
 \details{
-This function estimates loadings and variances for multiple orthogonal directions.
+This function estimates loadings and variances for multiple orthogonal directions. The loadings are W and C.
+The X-scores can be retrieved via \code{X \%*\% fit$W} where fit is a PPLS fit, or with the function \code{\link{scores.PPLS}}.
+The o2m initial guess fits a PLS model using the function \code{O2PLS::o2m} and uses the result as starting values.
+If for some reason the likelihood is not monotone, (re)try with \code{initialGuess = 'random'}.
+
+Use \code{plot(fit)} to plot the first two loadings. Use \code{print(fit,perc=TRUE)} for variances in percentages.
 }
 \section{Usage}{
 

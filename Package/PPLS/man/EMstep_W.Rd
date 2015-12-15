@@ -2,7 +2,7 @@
 % Please edit documentation in R/EM_W_multi.R
 \name{EMstep_W}
 \alias{EMstep_W}
-\title{Performs one EM step}
+\title{Performs one EM step (use \link{PPLS} for fitting a PPLS model)}
 \usage{
 EMstep_W(X, Y, W. = W, C. = C, B_T. = B_T, sigX. = sigX, sigY. = sigY,
   sigH. = sigH, sigT. = sigT)
@@ -28,15 +28,15 @@ EMstep_W(X, Y, W. = W, C. = C, B_T. = B_T, sigX. = sigX, sigY. = sigY,
 }
 \value{
 A list with updated values for\itemize{
-   \item{W}{Matrix}
-   \item{C}{Matrix}
-   \item{B}{Matrix}
-   \item{sighat}{Vector containing updated sigX and sigY}
-   \item{siglathat}{Vector containing sigH and sigT}
+   \item{W }{Matrix}
+   \item{C }{Matrix}
+   \item{B }{Matrix}
+   \item{sighat }{Vector containing updated sigX and sigY}
+   \item{siglathat }{Vector containing sigH and sigT}
  }
 }
 \description{
-Performs one EM step
+Performs one EM step (use \link{PPLS} for fitting a PPLS model)
 }
 \details{
 This function passes its arguments to EMstepC (a C++ function, see \link{Rcpp}), which returns the expected sufficient statistics.

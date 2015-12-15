@@ -2,10 +2,11 @@
 % Please edit documentation in R/EM_W_multi.R
 \name{PPLSi}
 \alias{PPLSi}
-\title{Performs PPLS fit in one direction.}
+\title{Performs PPLS fit in one direction. (use \link{PPLS} for fitting a PPLS model)}
 \usage{
-PPLSi(X, Y, EMsteps = 100, atol = 1e-04, initialGuess = c("o2m", "random",
-  "equal"), critfunc = function(x) {     x }, print_logvalue = FALSE)
+PPLSi(X, Y, EMsteps = 100, atol = 1e-04, initialGuess = c("equal", "o2m",
+  "random", "custom"), customGuess = NULL, critfunc = function(x) {     x },
+  print_logvalue = FALSE)
 }
 \arguments{
 \item{X}{Numeric matrix.}
@@ -17,6 +18,8 @@ PPLSi(X, Y, EMsteps = 100, atol = 1e-04, initialGuess = c("o2m", "random",
 \item{atol}{Double, convergence criterium for the log-likelihood}
 
 \item{initialGuess}{A string. Choose "o2m", "random" or "equal" depending on what type of initial guess you want.}
+
+\item{customGuess}{A list with named components W,C,B,sigE,sigF,sigH,sigT.}
 
 \item{critfunc}{Function measuring the increment value, i.e. f(L_{i+1} - L_{i}). Usually f == I or f == abs.}
 
@@ -34,7 +37,7 @@ A list with estimates for\itemize{
  }
 }
 \description{
-Performs PPLS fit in one direction.
+Performs PPLS fit in one direction. (use \link{PPLS} for fitting a PPLS model)
 }
 \details{
 This function estimates loadings and variances for one direction.

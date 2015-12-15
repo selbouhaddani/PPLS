@@ -22,6 +22,6 @@ Both the X and Y scores concatenated.
 Get scores from PPLS fit.
 }
 \details{
-This function plots two loadings/scores.
+If you want just the X or Y scores, subset the result i.e. \code{scores.PPLS(fit,X,Y)[1:ncol(X)]} or \code{scores.PPLS(fit,X,Y)[-(1:ncol(X))]}.
 }
 

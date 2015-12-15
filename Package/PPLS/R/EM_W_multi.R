@@ -22,7 +22,7 @@
 #' @import O2PLS
 NULL
 
-#' Performs one EM step
+#' Performs one EM step (use \link{PPLS} for fitting a PPLS model)
 #'
 #' @param X Numeric matrix.
 #' @param Y Numeric matrix.
@@ -34,11 +34,11 @@ NULL
 #' @param sigH. Numeric
 #' @param sigT. Numeric
 #' @return A list with updated values for\itemize{
-#'    \item{W}{Matrix}
-#'    \item{C}{Matrix}
-#'    \item{B}{Matrix}
-#'    \item{sighat}{Vector containing updated sigX and sigY}
-#'    \item{siglathat}{Vector containing sigH and sigT}
+#'    \item{W }{Matrix}
+#'    \item{C }{Matrix}
+#'    \item{B }{Matrix}
+#'    \item{sighat }{Vector containing updated sigX and sigY}
+#'    \item{siglathat }{Vector containing sigH and sigT}
 #'  }
 #' @details This function passes its arguments to EMstepC (a C++ function, see \link{Rcpp}), which returns the expected sufficient statistics.
 #' The maximization is done afterwards in this function. This may become a full C++ function later.
@@ -70,13 +70,14 @@ EMstep_W <- function(X , Y , W.=W, C.=C, B_T.=B_T,
 }
 
 
-#' Performs PPLS fit in one direction.
+#' Performs PPLS fit in one direction. (use \link{PPLS} for fitting a PPLS model)
 #'
 #' @param X Numeric matrix.
 #' @param Y Numeric matrix.
 #' @param EMsteps strictly positive integer. Denotes the maximum number of EM steps to make.
 #' @param atol Double, convergence criterium for the log-likelihood
 #' @param initialGuess A string. Choose "o2m", "random" or "equal" depending on what type of initial guess you want.
+#' @param customGuess A list with named components W,C,B,sigE,sigF,sigH,sigT.
 #' @param critfunc Function measuring the increment value, i.e. f(L_{i+1} - L_{i}). Usually f == I or f == abs.
 #' @param print_logvalue Logical. Should we print log-likelihood values for each step?
 #' @return A list with estimates for\itemize{
@@ -91,18 +92,19 @@ EMstep_W <- function(X , Y , W.=W, C.=C, B_T.=B_T,
 #' @details This function estimates loadings and variances for one direction.
 #'
 #' @export
-PPLSi <- function(X,Y,EMsteps=1e2,atol=1e-4,initialGuess=c("o2m","random","equal"),critfunc=function(x){x},print_logvalue=FALSE)
+PPLSi <- function(X,Y,EMsteps=1e2,atol=1e-4,initialGuess=c("equal","o2m","random","custom"),customGuess=NULL,critfunc=function(x){x},print_logvalue=FALSE)
 {
   a = 1
   p = ncol(X)
   q = ncol(Y)
   N = nrow(X)
   initialGuess = match.arg(initialGuess)
+  if(!is.null(customGuess)){initialGuess = "custom"}
   if(initialGuess == "o2m"){
     sim=o2m(X,Y,1,0,0)
     Wnw=sim$W.;Cnw=sim$C.;Bnw=sim$B_T.[1];
-    signw=sqrt(c(ssq(sim$E)/N/p,ssq(sim$F)/N/q));
-    siglatnw=sqrt(c(ssq(sim$H_U),ssq(sim$Tt))/N)
+    signw=sqrt(c((ssq(X)-ssq(sim$Tt))/N/p,(ssq(Y)-ssq(sim$U))/N/q));
+    siglatnw=sqrt(c(ssq(sim$U)-ssq(sim$Tt*Bnw),ssq(sim$Tt))/N)
     #ret = list(W=Wnw,C=Cnw,B=Bnw,sig=c(signw,siglatnw))
   } else if(initialGuess == "random"){
     Wnw=orth(runif(p));Cnw=orth(runif(q)); Bnw = rchisq(1,1); siglatnw =  rchisq(2,100)/100; signw = rchisq(2,10)/100
@@ -110,6 +112,9 @@ PPLSi <- function(X,Y,EMsteps=1e2,atol=1e-4,initialGuess=c("o2m","random","equal
   }else if(initialGuess == "equal"){
     Wnw=orth(rep(1,p));Cnw=orth(rep(1,q)); Bnw = 1; siglatnw =  c(1,1); signw = c(1/p,1/q)
     #ret = list(W=Wnw,C=Cnw,B=Bnw,sig=c(signw,siglatnw))
+  }else if(initialGuess == "custom"){
+    stopifnot('list' %in% class(customGuess))
+    Wnw = customGuess$W;Cnw=customGuess$C;Bnw=customGuess$B;siglatnw=with(customGuess,c(sigH,sigT));signw=with(customGuess,c(sigE,sigF))
   }
 
   logvalue=1:(EMsteps+1)*NA
@@ -141,7 +146,7 @@ PPLSi <- function(X,Y,EMsteps=1e2,atol=1e-4,initialGuess=c("o2m","random","equal
 }
 
 
-#' Performs PPLS fit in sequentially multiple directions.
+#' Performs PPLS fit.
 #'
 #' @param X Numeric matrix.
 #' @param Y Numeric matrix.
@@ -149,31 +154,44 @@ PPLSi <- function(X,Y,EMsteps=1e2,atol=1e-4,initialGuess=c("o2m","random","equal
 #' @param EMsteps strictly positive integer. Denotes the maximum number of EM steps to make.
 #' @param atol Double, convergence criterium for the log-likelihood
 #' @param initialGuess A string. Choose "o2m", "random" or "equal" depending on what type of initial guess you want.
+#' @param customGuess A list with named components W,C,B,sigE,sigF,sigH,sigT.
 #' @param critfunc Function measuring the increment value, i.e. f(L_{i+1} - L_{i}). Usually f == I or f == abs.
 #' @param print_logvalue Logical. Should we print log-likelihood values for each step?
 #' @return A list with estimates for\itemize{
-#'    \item{W}{Matrix, each column is a fit.}
-#'    \item{C}{Matrix, each column is a fit.}
-#'    \item{B}{Matrix, each column is a fit.}
-#'    \item{sig}{Matrix containing updated sigX, sigY, sigH and sigT. Columns are named.}
-#'    \item{Other_output}{\itemize{
+#'    \item{W }{Matrix, each column is a fit.}
+#'    \item{C }{Matrix, each column is a fit.}
+#'    \item{B }{Matrix, each column is a fit.}
+#'    \item{sig }{Matrix containing updated sigX, sigY, sigH and sigT. Columns are named.}
+#'    \item{Other_output }{\itemize{
 #'          \item{Last_increment}{.}
 #'          \item{Number_steps}{.}
 #'          \item{Loglikelihoods}{.}
 #'          }
 #'    }
 #'  }
-#' @details This function estimates loadings and variances for multiple orthogonal directions.
+#' @details This function estimates loadings and variances for multiple orthogonal directions. The loadings are W and C.
+#' The X-scores can be retrieved via \code{X \%*\% fit$W} where fit is a PPLS fit, or with the function \code{\link{scores.PPLS}}.
+#' The o2m initial guess fits a PLS model using the function \code{O2PLS::o2m} and uses the result as starting values.
+#' If for some reason the likelihood is not monotone, (re)try with \code{initialGuess = 'random'}.
 #'
+#' Use \code{plot(fit)} to plot the first two loadings. Use \code{print(fit,perc=TRUE)} for variances in percentages.
 #' @export
-PPLS <- function(X,Y,nr_comp=1,EMsteps=1e2,atol=1e-4,initialGuess=c("equal","o2m","random"),critfunc=function(x){x},print_logvalue=FALSE)
+PPLS <- function(X,Y,nr_comp=1,EMsteps=1e2,atol=1e-4,initialGuess=c("equal","o2m","random","custom"),customGuess=NULL,critfunc=function(x){x},print_logvalue=FALSE)
 {
+  if(!is.null(row.names(X))&!is.null(row.names(X))){
+    if(!all.equal(row.names(X),row.names(Y))){warning("specified rownames not equal!")}
+  }
+  X = as.matrix(X)
+  Y = as.matrix(Y)
+  stopifnot(nrow(X) == nrow(Y),ncol(X)>=nr_comp,ncol(Y)>=nr_comp)
+  if(nr_comp<=0){stop("#components must be >0")}
+
   initialGuess = match.arg(initialGuess)
   a = nr_comp
   p = ncol(X)
   q = ncol(Y)
   N = nrow(X)
-  if(p+q>5000 && initialGuess == 'o2m'){initialGuess = 'equal';warning("p or q too large for 'o2m' initial guess, we chose 'equal' instead.")}
+  #if(p+q>5000 && initialGuess == 'o2m'){initialGuess = 'equal';warning("p or q too large for 'o2m' initial guess, we chose 'equal' instead.")}
   Wn = matrix(NA,p,a)
   Cn = matrix(NA,q,a)
   Bn = sigXn = sigYn = sigHn = sigTn = 1:a*NA
@@ -181,7 +199,7 @@ PPLS <- function(X,Y,nr_comp=1,EMsteps=1e2,atol=1e-4,initialGuess=c("equal","o2m
   Xc = X
   Yc = Y
   for(i in 1:a){
-    fit = PPLSi(Xc,Yc,EMsteps,atol,initialGuess,critfunc,print_logvalue=TRUE);
+    fit = PPLSi(Xc,Yc,EMsteps,atol,initialGuess,customGuess,critfunc,print_logvalue=TRUE);
     if(is.na(fit$B[1])){
       warning(paste("From component",i,"on the residuals are of rank <",1e-14,"and calculations are stopped."))
       i = i-1;
@@ -254,13 +272,14 @@ logl_W <- function(X , Y , W.=W, C.=C, B_T.=B_T,
 #'
 #' @param x A PPLS fit (an object of class PPLS)
 #' @param perc Display relative percentages yes/no?
+#' @param digits How many digits should be retained?
 #' @param ... For consistency
-#' @return Invisible, the outputted table
+#' @return Invisible data.frame, the outputted table
 #'
 #' @details This function shows the absolute/relative variances of each component.
 #'
 #' @export
-print.PPLS <- function (x,perc=FALSE,...)
+print.PPLS <- function (x,perc=FALSE,digits=3,...)
 {
   p = nrow(x$W)
   q = nrow(x$C)
@@ -268,7 +287,7 @@ print.PPLS <- function (x,perc=FALSE,...)
     with(x, {
       c(i,sum(sig[1:i, 4]^2)/(perc*(sum(sig[1:i, 4]^2) + p * x$sig[i, 1]^2) + (1 - perc)),
         sum(sig[1:i,4]^2 * B[1:i]^2 + sig[i, 3]^2)/(perc * (sum(sig[1:i,4]^2 * B[1:i]^2 + sig[i, 3]^2) + q * sig[i, 2]^2) +(1 - perc)),
-        sig[i, 3]^2 / (perc*(sig[1:i,4]^2 * B[1:i]^2 + sig[i, 3]^2) + (1-perc)),
+        sig[i, 3]^2 / (perc*sum(sig[1:i,4]^2 * B[1:i]^2 + sig[i, 3]^2) + (1-perc)),
         c(0, diff(x$Oth$Log))[i],x$Oth$Nu[i], signif(x$Oth$Last[i], 3))
     })
   })
@@ -276,7 +295,7 @@ print.PPLS <- function (x,perc=FALSE,...)
   names(outp) = c("LV", ifelse(perc, "ssq(T)/ssq(X)", "ssq(T)"),
                   ifelse(perc, "ssq(U)/ssq(Y)", "ssq(U)"), "sigma_H", "log LR",
                   "#steps", "last incr")
-  print(outp)
+  print(round(outp,digits))
   return(invisible(outp))
 }
 
@@ -284,17 +303,18 @@ print.PPLS <- function (x,perc=FALSE,...)
 #'
 #' @param x A PPLS fit (an object of class PPLS)
 #' @param XorY Plot loadings for X or Y?
-#' @param i Positive integer. The i-th loading/score will be plotted on the first axis
-#' @param j Positive integer. The j-th loading/score will be plotted on the second axis
+#' @param i Positive integer. The i-th loading/score will be plotted on the first axis.
+#' @param j Positive integer or NULL (default). The j-th loading/score will be plotted on the second axis, or if NULL, the i-th loading is plotted against its index.
 #' @param use_ggplot2 Logical. Use ggplot2?
 #' @param ... For consistency
 #' @return If ggplot2 is active, returns the ggplot object. Else NULL.
 #'
-#' @details This function plots two loadings/scores.
+#' @details This function plots one or two loadings/scores.
 #'
 #' @export
 plot.PPLS <- function (x, XorY = c("X", "Y"), i = 1, j = NULL, use_ggplot2=TRUE,...)
 {
+  if(ncol(x$W) < i || (!is.null(j) && ncol(x$W) < j)){stop("i and j cannot exceed #components!")}
   fit = list()
   XorY = match.arg(XorY)
   if(XorY == "X"){fit$load = x$W[,c(i,j)]}else{fit$load = x$C[,c(i,j)]}
@@ -331,7 +351,7 @@ plot.PPLS <- function (x, XorY = c("X", "Y"), i = 1, j = NULL, use_ggplot2=TRUE,
 #' @param subset vector of positive integers denoting with components you want.
 #' @return Both the X and Y scores concatenated.
 #'
-#' @details This function plots two loadings/scores.
+#' @details If you want just the X or Y scores, subset the result i.e. \code{scores.PPLS(fit,X,Y)[1:ncol(X)]} or \code{scores.PPLS(fit,X,Y)[-(1:ncol(X))]}.
 #'
 #' @export
 scores.PPLS <- function (fit, X, Y, subset = NULL)

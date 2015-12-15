@@ -12,9 +12,9 @@
 
 \item{XorY}{Plot loadings for X or Y?}
 
-\item{i}{Positive integer. The i-th loading/score will be plotted on the first axis}
+\item{i}{Positive integer. The i-th loading/score will be plotted on the first axis.}
 
-\item{j}{Positive integer. The j-th loading/score will be plotted on the second axis}
+\item{j}{Positive integer or NULL (default). The j-th loading/score will be plotted on the second axis, or if NULL, the i-th loading is plotted against its index.}
 
 \item{use_ggplot2}{Logical. Use ggplot2?}
 
@@ -27,6 +27,6 @@ If ggplot2 is active, returns the ggplot object. Else NULL.
 Plot function for class PPLS.
 }
 \details{
-This function plots two loadings/scores.
+This function plots one or two loadings/scores.
 }
 

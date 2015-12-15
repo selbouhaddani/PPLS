@@ -1,7 +1,7 @@
 Package: PPLS
 Type: Package
 Title: Probabilistic Partial Least Squares
-Version: 0.2.8
+Version: 0.2.9
 Date: 2015-11-13
 Author: Said el Bouhaddani
 Maintainer: Said el Bouhaddani <s.el_bouhaddani@lumc.nl>
