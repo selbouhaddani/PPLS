@@ -119,3 +119,26 @@ BEGIN_RCPP
     return __result;
 END_RCPP
 }
+// EMstepC_fast_modif
+List EMstepC_fast_modif(Eigen::VectorXd W, Eigen::VectorXd C, double B, Eigen::MatrixXd X, Eigen::MatrixXd Y, Eigen::VectorXd Z, double sigX, double sigY, double sigH, double sigT, double c1, double c2, double c3);
+RcppExport SEXP PPLS_EMstepC_fast_modif(SEXP WSEXP, SEXP CSEXP, SEXP BSEXP, SEXP XSEXP, SEXP YSEXP, SEXP ZSEXP, SEXP sigXSEXP, SEXP sigYSEXP, SEXP sigHSEXP, SEXP sigTSEXP, SEXP c1SEXP, SEXP c2SEXP, SEXP c3SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type W(WSEXP);
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type C(CSEXP);
+    Rcpp::traits::input_parameter< double >::type B(BSEXP);
+    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type X(XSEXP);
+    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type Z(ZSEXP);
+    Rcpp::traits::input_parameter< double >::type sigX(sigXSEXP);
+    Rcpp::traits::input_parameter< double >::type sigY(sigYSEXP);
+    Rcpp::traits::input_parameter< double >::type sigH(sigHSEXP);
+    Rcpp::traits::input_parameter< double >::type sigT(sigTSEXP);
+    Rcpp::traits::input_parameter< double >::type c1(c1SEXP);
+    Rcpp::traits::input_parameter< double >::type c2(c2SEXP);
+    Rcpp::traits::input_parameter< double >::type c3(c3SEXP);
+    __result = Rcpp::wrap(EMstepC_fast_modif(W, C, B, X, Y, Z, sigX, sigY, sigH, sigT, c1, c2, c3));
+    return __result;
+END_RCPP
+}

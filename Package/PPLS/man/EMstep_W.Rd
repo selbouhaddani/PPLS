@@ -4,8 +4,7 @@
 \alias{EMstep_W}
 \title{Performs one EM step (use \link{PPLS} for fitting a PPLS model)}
 \usage{
-EMstep_W(X, Y, W. = W, C. = C, B_T. = B_T, sigX. = sigX, sigY. = sigY,
-  sigH. = sigH, sigT. = sigT)
+EMstep_W(X, Y, W., C., B_T., sigX., sigY., sigH., sigT.)
 }
 \arguments{
 \item{X}{Numeric matrix.}

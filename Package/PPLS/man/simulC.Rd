@@ -2,17 +2,39 @@
 % Please edit documentation in R/RcppExports.R
 \name{simulC}
 \alias{simulC}
-\title{Title here}
+\title{Simulate data from a PO2PLS model}
 \usage{
 simulC(N, W, C, P_Yosc, P_Xosc, B_T, sigX, sigY, sigH, sigT, sigTo, sigUo)
 }
 \arguments{
-\item{X}{Numeric matrix.}
+\item{N}{integer. Sample size}
+
+\item{W}{numeric matrix. Joint X-loadings, should be an orthogonal matrix with orthonormal columns.}
+
+\item{C}{numeric matrix. Joint Y-loadings, should be an orthogonal matrix with orthonormal columns.}
+
+\item{P_Yosc}{numeric matrix. Orthogonal X-loadings, should be an orthogonal matrix with orthonormal columns.}
+
+\item{P_Xosc}{numeric matrix. Orthogonal X-loadings, should be an orthogonal matrix with orthonormal columns.}
+
+\item{B_T}{Diagonal matrix. Inner relation parameter}
+
+\item{sigX}{double. Positive variance parameter for the noise in X}
+
+\item{sigY}{double. Positive variance parameter for the noise in Y}
+
+\item{sigH}{double. Positive variance parameter for the noise in U}
+
+\item{sigT}{Diagonal matrix. Contains positive variances for each latent variable in T}
+
+\item{sigTo}{Diagonal matrix. Contains positive variances for each latent variable in T_Yosc}
+
+\item{sigUo}{Diagonal matrix. Contains positive variances for each latent variable in U_Xosc}
 }
 \value{
-...
+Dat. Matrix of size N times p+q. Rows are samples, columns are realisations of X and Y concatenated together.
 }
 \description{
-Title here
+Simulate data from a PO2PLS model
 }
 

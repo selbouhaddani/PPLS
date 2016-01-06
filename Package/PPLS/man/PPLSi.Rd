@@ -6,7 +6,7 @@
 \usage{
 PPLSi(X, Y, EMsteps = 100, atol = 1e-04, initialGuess = c("equal", "o2m",
   "random", "custom"), customGuess = NULL, critfunc = function(x) {     x },
-  print_logvalue = FALSE)
+  constraints = fconstraint())
 }
 \arguments{
 \item{X}{Numeric matrix.}
@@ -23,17 +23,17 @@ PPLSi(X, Y, EMsteps = 100, atol = 1e-04, initialGuess = c("equal", "o2m",
 
 \item{critfunc}{Function measuring the increment value, i.e. f(L_{i+1} - L_{i}). Usually f == I or f == abs.}
 
-\item{print_logvalue}{Logical. Should we print log-likelihood values for each step?}
+\item{constraints}{List. Ideally being constructed with \link{fconstraint}.}
 }
 \value{
 A list with estimates for\itemize{
    \item{W}{Matrix}
    \item{C}{Matrix}
    \item{B}{Matrix}
-   \item{sig}{Vector containing updated sigX, sigY, sigH and sigT}
-   \item{logvalue}{Vector with last (or all, if print_logvalue==TRUE) log-likelihood(s)}
-   \item{Last_increment}{Double, value of last increment.}
-   \item{Number_steps}{Integer, number of steps needed to stop.}
+   \item{sig}{ Vector containing updated sigX, sigY, sigH and sigT}
+   \item{logvalue}{ Vector with last log-likelihood(s)}
+   \item{Last_increment}{ Double, value of last increment.}
+   \item{Number_steps}{ Integer, number of steps needed to stop.}
  }
 }
 \description{

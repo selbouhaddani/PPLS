@@ -4,7 +4,7 @@
 \alias{print.PPLS}
 \title{Print function for class PPLS.}
 \usage{
-\method{print}{PPLS}(x, perc = FALSE, digits = 3, ...)
+\method{print}{PPLS}(x, perc = TRUE, digits = 3, ...)
 }
 \arguments{
 \item{x}{A PPLS fit (an object of class PPLS)}

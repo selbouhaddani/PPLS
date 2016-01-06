@@ -4,8 +4,7 @@
 \alias{logl_W}
 \title{Calculates loglikelihood for PPLS model.}
 \usage{
-logl_W(X, Y, W. = W, C. = C, B_T. = B_T, sigX. = sigX, sigY. = sigY,
-  sigH. = sigH, sigT. = sigT)
+logl_W(X, Y, W., C., B_T., sigX., sigY., sigH., sigT.)
 }
 \arguments{
 \item{X}{Numeric matrix.}

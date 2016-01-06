@@ -32,10 +32,7 @@ Eigen::MatrixXd invUpdate(double sig, Eigen::VectorXd W)
 // ---------------- This is one of the two CORE functions
 // ---------------- It evaluates the likelihood at each step
 
-//' Title here
-//'
-//' @param X Numeric matrix.
-//' @return ...
+
 // [[Rcpp::export]]
 List loglC(Eigen::MatrixXd W,Eigen::MatrixXd C,Eigen::MatrixXd P_Yosc,Eigen::MatrixXd P_Xosc,Eigen::MatrixXd B_T, Eigen::MatrixXd Dat,
              double sigX,double sigY,double sigH,Eigen::MatrixXd sigT,Eigen::MatrixXd sigTo,Eigen::MatrixXd sigUo,
@@ -115,10 +112,7 @@ List loglC(Eigen::MatrixXd W,Eigen::MatrixXd C,Eigen::MatrixXd P_Yosc,Eigen::Mat
 
 }
 
-//' Title here
-//'
-//' @param X Numeric matrix.
-//' @return ...
+
 // [[Rcpp::export]]
 List EMstepC(Eigen::MatrixXd W,Eigen::MatrixXd C, Eigen::MatrixXd P_Yosc, Eigen::MatrixXd P_Xosc,
              Eigen::MatrixXd B_T, Eigen::MatrixXd Dat,double sigX,double sigY,double sigH,
@@ -255,10 +249,21 @@ List EMstepC(Eigen::MatrixXd W,Eigen::MatrixXd C, Eigen::MatrixXd P_Yosc, Eigen:
    return ret;
 }
 
-//' Title here
+//' Simulate data from a PO2PLS model
 //'
-//' @param X Numeric matrix.
-//' @return ...
+//' @param N integer. Sample size
+//' @param W numeric matrix. Joint X-loadings, should be an orthogonal matrix with orthonormal columns.
+//' @param C numeric matrix. Joint Y-loadings, should be an orthogonal matrix with orthonormal columns.
+//' @param P_Yosc numeric matrix. Orthogonal X-loadings, should be an orthogonal matrix with orthonormal columns.
+//' @param P_Xosc numeric matrix. Orthogonal X-loadings, should be an orthogonal matrix with orthonormal columns.
+//' @param B_T Diagonal matrix. Inner relation parameter
+//' @param sigX double. Positive variance parameter for the noise in X
+//' @param sigY double. Positive variance parameter for the noise in Y
+//' @param sigH double. Positive variance parameter for the noise in U
+//' @param sigT Diagonal matrix. Contains positive variances for each latent variable in T
+//' @param sigTo Diagonal matrix. Contains positive variances for each latent variable in T_Yosc
+//' @param sigUo Diagonal matrix. Contains positive variances for each latent variable in U_Xosc
+//' @return Dat. Matrix of size N times p+q. Rows are samples, columns are realisations of X and Y concatenated together.
 //' @export
 // [[Rcpp::export]]
 Eigen::MatrixXd simulC(int N, Eigen::MatrixXd W,Eigen::MatrixXd C, Eigen::MatrixXd P_Yosc, Eigen::MatrixXd P_Xosc,Eigen::MatrixXd B_T,
@@ -309,10 +314,7 @@ Eigen::MatrixXd simulC(int N, Eigen::MatrixXd W,Eigen::MatrixXd C, Eigen::Matrix
   return Dat;
 }
 
-//' Title here
-//'
-//' @param X Numeric matrix.
-//' @return ...
+
 // [[Rcpp::export]]
 double loglC_fast(Eigen::MatrixXd W,Eigen::MatrixXd C,Eigen::MatrixXd X, Eigen::MatrixXd Y,
            double sigX,double sigY,Eigen::VectorXd sig2T,
@@ -335,10 +337,7 @@ double loglC_fast(Eigen::MatrixXd W,Eigen::MatrixXd C,Eigen::MatrixXd X, Eigen::
   return Loglik;
 }
 
-//' Title here
-//'
-//' @param X Numeric matrix.
-//' @return ...
+
 // [[Rcpp::export]]
 List EMstepC_fast(Eigen::VectorXd W,Eigen::VectorXd C,double B,
                   Eigen::MatrixXd X, Eigen::MatrixXd Y,double sigX,double sigY,double sigH,double sigT,double c1, double c2, double c3)
@@ -360,7 +359,7 @@ List EMstepC_fast(Eigen::VectorXd W,Eigen::VectorXd C,double B,
   double Ctt = sig2T - sig2T*sig2T*(-c1 - 2*B*c2 - B*B*(c3-1/sig2Y) + 1/sig2X) + mu_T.squaredNorm()/N;
 
 
-  VectorXd mu_U = Xw *(-sig2T*B*c1 + -c2*(sig2T*B*B+sig2H) + 1/sig2X*B*sig2T) + Y * C *(-c2*B*sig2T + -c3*(sig2T*B*B+sig2H) + 1/sig2Y*(sig2T*B*B+sig2H));
+  VectorXd mu_U = Xw *(-sig2T*B*c1 + -c2*(sig2T*B*B+sig2H) + 1/sig2X*B*sig2T) + Yc *(-c2*B*sig2T + -c3*(sig2T*B*B+sig2H) + 1/sig2Y*(sig2T*B*B+sig2H));
   VectorXd Cyu = Y.transpose() * mu_U / N;
   //double Cuu = (sig2T*B*B+sig2H) - (-(c1-1/sig2X)*sig2T*sig2T*B*B - 2*sig2T*B*(sig2T*B*B+sig2H)*c2 - pow(sig2T*B*B+sig2H,2)*(c3-1/sig2Y)) + mu_U.squaredNorm() / N;
 
@@ -381,9 +380,62 @@ List EMstepC_fast(Eigen::VectorXd W,Eigen::VectorXd C,double B,
   sighat(0) = sqrt(Cee); sighat(1) = sqrt(Cff);
   siglathat(0) = sqrt(Chh); siglathat(1) = sqrt(Ctt);
   List ret;
-
+  // // // // //  Maximizations ------------------------------------------------------------------------------
   ret["W"] = Cxt.normalized();
   ret["C"] = Cyu.normalized();
+  ret["B"] = Cut / Ctt;
+  ret["sighat"] = sighat;
+  ret["siglathat"] = siglathat;
+  return ret;
+
+}
+
+
+// [[Rcpp::export]]
+List EMstepC_fast_modif(Eigen::VectorXd W,Eigen::VectorXd C,double B,
+                  Eigen::MatrixXd X, Eigen::MatrixXd Y, Eigen::VectorXd Z,double sigX,double sigY,double sigH,double sigT,double c1, double c2, double c3)
+{
+  double sig2X = sigX*sigX;
+  double sig2Y = sigY*sigY;
+  double sig2H = sigH*sigH;
+  double sig2T = sigT*sigT;
+
+  int N = X.rows();
+  int p = W.size();
+  int q = C.size();
+
+  VectorXd Xw = X*W; VectorXd Yc = Y*C;
+  // // // // //  Expectations------------------------------------------------------------------------------
+  // // // For T ----------------------------
+  VectorXd mu_T = Xw *sig2T*(-c1 + -c2*B + 1/sig2X) + Yc *sig2T*(-c2 + -c3*B + 1/sig2Y*B);
+  VectorXd Cxt = X.transpose() * mu_T / N;
+  double Ctt = sig2T - sig2T*sig2T*(-c1 - 2*B*c2 - B*B*(c3-1/sig2Y) + 1/sig2X) + mu_T.squaredNorm()/N;
+
+
+  VectorXd mu_U = Xw *(-sig2T*B*c1 + -c2*(sig2T*B*B+sig2H) + 1/sig2X*B*sig2T) + Yc *(-c2*B*sig2T + -c3*(sig2T*B*B+sig2H) + 1/sig2Y*(sig2T*B*B+sig2H));
+  VectorXd Cyu = Y.transpose() * mu_U / N;
+  //double Cuu = (sig2T*B*B+sig2H) - (-(c1-1/sig2X)*sig2T*sig2T*B*B - 2*sig2T*B*(sig2T*B*B+sig2H)*c2 - pow(sig2T*B*B+sig2H,2)*(c3-1/sig2Y)) + mu_U.squaredNorm() / N;
+
+  double Cut = sig2T*B - (-sig2T*sig2T*B*(c1-1/sig2X) - sig2T*sig2T*B*B*c2 - sig2T*(sig2T*B*B+sig2H)*c2 - (sig2T*B*B+sig2H)*sig2T*B*(c3-1/sig2Y)) + mu_U.dot(mu_T)/N;
+
+  double Ceetmp = c1*c1*sig2X*sig2X*(Xw).squaredNorm() + X.array().square().sum() + c2*c2*sig2X*sig2X*(Yc).squaredNorm() -
+    2*c1*sig2X*(Xw).squaredNorm() + 2*c1*c2*sig2X*sig2X*(Xw).dot(Yc) - 2*c2*sig2X*(Xw).dot(Yc);
+  double Cee = sig2X - (-sig2X*sig2X*(c1) + p*sig2X )/p + ( Ceetmp )/N/p;
+
+  double Cfftmp = c3*c3*sig2Y*sig2Y*(Yc).squaredNorm() + Y.array().square().sum() + c2*c2*sig2Y*sig2Y*(Xw).squaredNorm() -
+    2*c3*sig2Y*(Yc).squaredNorm() + 2*c3*c2*sig2Y*sig2Y*(Yc).dot(Xw) - 2*c2*sig2Y*(Yc).dot(Xw);
+  double Cff = sig2Y - (-sig2Y*sig2Y*c3 + q*sig2Y )/q + ( Cfftmp )/N/q;
+
+  double Chh = sig2H - (-sig2H*sig2H*(c3-1/sig2Y)) + (-c2*sig2H*Xw - (c3-1/sig2Y)*sig2H*Yc).squaredNorm()/N;
+
+  Vector2d sighat;
+  Vector2d siglathat;
+  sighat(0) = sqrt(Cee); sighat(1) = sqrt(Cff);
+  siglathat(0) = sqrt(Chh); siglathat(1) = sqrt(Ctt);
+  List ret;
+  // // // // //  Maximizations ------------------------------------------------------------------------------
+  ret["W"] = (X.transpose()*mu_T * Z.squaredNorm() - (X.transpose()*Z)*Z.dot(mu_T)) / (Z.squaredNorm()*mu_T.squaredNorm() - pow(mu_T.dot(Z),2));
+  ret["C"] = (Y.transpose()*mu_U * Z.squaredNorm() - (Y.transpose()*Z)*Z.dot(mu_U)) / (Z.squaredNorm()*mu_U.squaredNorm() - pow(mu_U.dot(Z),2));
   ret["B"] = Cut / Ctt;
   ret["sighat"] = sighat;
   ret["siglathat"] = siglathat;
