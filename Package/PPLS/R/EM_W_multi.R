@@ -381,7 +381,7 @@ plot.PPLS <- function (x, XorY = c("X", "Y"), i = 1, j = NULL, use_ggplot2=TRUE,
                           geom = "text", xlab = colnames(load)[1], ylab = colnames(load)[2]))
     plt = plt + geom_vline(xintercept = 0) + geom_hline(yintercept = 0)
     print(plt)
-    return(plt)
+    return(invisible(plt))
   }
   else {
     with(fit, {
