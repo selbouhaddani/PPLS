@@ -386,17 +386,14 @@ List EMstepC_fast(Eigen::VectorXd W,Eigen::VectorXd C,double B,
   ret["B"] = Cut / Ctt;
   ret["sighat"] = sighat;
   ret["siglathat"] = siglathat;
-  ret["Cut"] = Cut;
-  ret["Ctt"] = Ctt;
-  ret["Cee"] = Cee;
-  ret["Cff"] = Cff;
-  ret["Chh"] = Chh;
   return ret;
+
 }
 
+
 // [[Rcpp::export]]
-List meta_Estep(Eigen::VectorXd W,Eigen::VectorXd C,double B,
-                  Eigen::MatrixXd X, Eigen::MatrixXd Y,double sigX,double sigY,double sigH,double sigT,double c1, double c2, double c3)
+List EMstepC_fast_modif(Eigen::VectorXd W,Eigen::VectorXd C,double B,
+                  Eigen::MatrixXd X, Eigen::MatrixXd Y, Eigen::VectorXd Z,double sigX,double sigY,double sigH,double sigT,double c1, double c2, double c3)
 {
   double sig2X = sigX*sigX;
   double sig2Y = sigY*sigY;
@@ -431,38 +428,17 @@ List meta_Estep(Eigen::VectorXd W,Eigen::VectorXd C,double B,
 
   double Chh = sig2H - (-sig2H*sig2H*(c3-1/sig2Y)) + (-c2*sig2H*Xw - (c3-1/sig2Y)*sig2H*Yc).squaredNorm()/N;
 
-  List ret;
-  ret["Cxt"] = Cxt;
-  ret["Cyu"] = Cyu;
-  ret["Cut"] = Cut;
-  ret["Ctt"] = Ctt;
-  ret["Cee"] = Cee;
-  ret["Cff"] = Cff;
-  ret["Chh"] = Chh;
-  return ret;
-}
-
-// [[Rcpp::export]]
-List meta_Mstep(List ret)
-  {
-  VectorXd Cxt = ret["Cxt"];
-  VectorXd Cyu = ret["Cyu"];
-  double Cut = ret["Cut"];
-  double Ctt = ret["Ctt"];
-  double Cee = ret["Cee"];
-  double Cff = ret["Cff"];
-  double Chh = ret["Chh"];
-
   Vector2d sighat;
   Vector2d siglathat;
   sighat(0) = sqrt(Cee); sighat(1) = sqrt(Cff);
   siglathat(0) = sqrt(Chh); siglathat(1) = sqrt(Ctt);
-  // // // // //  Maximizations ---------------------------------------------
-  List ret2;
-  ret2["B"] = Cut / Ctt;
-  ret2["sighat"] = sighat;
-  ret2["siglathat"] = siglathat;
-  ret2["Cxt"] = Cxt;
-  ret2["Cyu"] = Cyu;
-  return ret2;
+  List ret;
+  // // // // //  Maximizations ------------------------------------------------------------------------------
+  ret["W"] = (X.transpose()*mu_T * Z.squaredNorm() - (X.transpose()*Z)*Z.dot(mu_T)) / (Z.squaredNorm()*mu_T.squaredNorm() - pow(mu_T.dot(Z),2));
+  ret["C"] = (Y.transpose()*mu_U * Z.squaredNorm() - (Y.transpose()*Z)*Z.dot(mu_U)) / (Z.squaredNorm()*mu_U.squaredNorm() - pow(mu_U.dot(Z),2));
+  ret["B"] = Cut / Ctt;
+  ret["sighat"] = sighat;
+  ret["siglathat"] = siglathat;
+  return ret;
+
 }

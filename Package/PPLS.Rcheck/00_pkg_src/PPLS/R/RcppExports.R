@@ -37,11 +37,7 @@ EMstepC_fast <- function(W, C, B, X, Y, sigX, sigY, sigH, sigT, c1, c2, c3) {
     .Call('PPLS_EMstepC_fast', PACKAGE = 'PPLS', W, C, B, X, Y, sigX, sigY, sigH, sigT, c1, c2, c3)
 }
 
-meta_Estep <- function(W, C, B, X, Y, sigX, sigY, sigH, sigT, c1, c2, c3) {
-    .Call('PPLS_meta_Estep', PACKAGE = 'PPLS', W, C, B, X, Y, sigX, sigY, sigH, sigT, c1, c2, c3)
-}
-
-meta_Mstep <- function(ret) {
-    .Call('PPLS_meta_Mstep', PACKAGE = 'PPLS', ret)
+EMstepC_fast_modif <- function(W, C, B, X, Y, Z, sigX, sigY, sigH, sigT, c1, c2, c3) {
+    .Call('PPLS_EMstepC_fast_modif', PACKAGE = 'PPLS', W, C, B, X, Y, Z, sigX, sigY, sigH, sigT, c1, c2, c3)
 }
 

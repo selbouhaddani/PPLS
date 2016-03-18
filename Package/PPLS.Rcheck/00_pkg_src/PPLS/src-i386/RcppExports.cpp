@@ -119,9 +119,9 @@ BEGIN_RCPP
     return __result;
 END_RCPP
 }
-// meta_Estep
-List meta_Estep(Eigen::VectorXd W, Eigen::VectorXd C, double B, Eigen::MatrixXd X, Eigen::MatrixXd Y, double sigX, double sigY, double sigH, double sigT, double c1, double c2, double c3);
-RcppExport SEXP PPLS_meta_Estep(SEXP WSEXP, SEXP CSEXP, SEXP BSEXP, SEXP XSEXP, SEXP YSEXP, SEXP sigXSEXP, SEXP sigYSEXP, SEXP sigHSEXP, SEXP sigTSEXP, SEXP c1SEXP, SEXP c2SEXP, SEXP c3SEXP) {
+// EMstepC_fast_modif
+List EMstepC_fast_modif(Eigen::VectorXd W, Eigen::VectorXd C, double B, Eigen::MatrixXd X, Eigen::MatrixXd Y, Eigen::VectorXd Z, double sigX, double sigY, double sigH, double sigT, double c1, double c2, double c3);
+RcppExport SEXP PPLS_EMstepC_fast_modif(SEXP WSEXP, SEXP CSEXP, SEXP BSEXP, SEXP XSEXP, SEXP YSEXP, SEXP ZSEXP, SEXP sigXSEXP, SEXP sigYSEXP, SEXP sigHSEXP, SEXP sigTSEXP, SEXP c1SEXP, SEXP c2SEXP, SEXP c3SEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
@@ -130,6 +130,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type B(BSEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type X(XSEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type Z(ZSEXP);
     Rcpp::traits::input_parameter< double >::type sigX(sigXSEXP);
     Rcpp::traits::input_parameter< double >::type sigY(sigYSEXP);
     Rcpp::traits::input_parameter< double >::type sigH(sigHSEXP);
@@ -137,18 +138,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type c1(c1SEXP);
     Rcpp::traits::input_parameter< double >::type c2(c2SEXP);
     Rcpp::traits::input_parameter< double >::type c3(c3SEXP);
-    __result = Rcpp::wrap(meta_Estep(W, C, B, X, Y, sigX, sigY, sigH, sigT, c1, c2, c3));
-    return __result;
-END_RCPP
-}
-// meta_Mstep
-List meta_Mstep(List ret);
-RcppExport SEXP PPLS_meta_Mstep(SEXP retSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject __result;
-    Rcpp::RNGScope __rngScope;
-    Rcpp::traits::input_parameter< List >::type ret(retSEXP);
-    __result = Rcpp::wrap(meta_Mstep(ret));
+    __result = Rcpp::wrap(EMstepC_fast_modif(W, C, B, X, Y, Z, sigX, sigY, sigH, sigT, c1, c2, c3));
     return __result;
 END_RCPP
 }
