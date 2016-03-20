@@ -17,4 +17,4 @@ Imports:
     O2PLS,
     ggplot2
 LinkingTo: Rcpp, RcppEigen
-RoxygenNote: 5.0.0
+RoxygenNote: 5.0.1

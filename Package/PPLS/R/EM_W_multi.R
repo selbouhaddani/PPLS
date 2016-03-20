@@ -440,9 +440,7 @@ scores.PPLS <- function (fit, X, Y, subset = NULL)
 #' The maximization is done afterwards in this function. This may become a full C++ function later.
 #'
 #' @export
-meta_EMstep <- function(X , Y , W. = W, C. = C, Ipopu = as.factor(rep(1:2,c(N/2,N/2))),
-                        params = lapply(1:nlevels(Ipopu),
-                                        function(i){list(B_T=B_T,sigX=sigX,sigY=sigY,sigT=sigT)}))
+meta_EMstep <- function(X , Y , W. = W, C. = C, Ipopu, params)
 {
   stopifnot(nrow(X) == length(Ipopu))
   Ipopu = as.factor(Ipopu)
@@ -451,8 +449,8 @@ meta_EMstep <- function(X , Y , W. = W, C. = C, Ipopu = as.factor(rep(1:2,c(N/2,
   C. = as.vector(C.)
 
   ret1 = lapply(1:length(N), function(i){
-    Ni = c(1,N)
-    popui = Ni[i]:Ni[i+1]
+    Ni = c(0,N)
+    popui = (1+Ni[i]):Ni[i+1]
     X = X[popui,]
     Y = Y[popui,]
     e = with(params[[i]],{
@@ -471,7 +469,6 @@ meta_EMstep <- function(X , Y , W. = W, C. = C, Ipopu = as.factor(rep(1:2,c(N/2,
       c1 = Kw / (sigX.^2*(Kw + sigX.^2));
       c3 = Kc / (sigY.^2*(Kc + sigY.^2));
       c2 = Kwc;
-
       meta_Estep(W.,C.,B_T.,X,Y,sigX.,sigY.,sigH.,sigT.,c1,c2,c3)
     })
     e2 = meta_Mstep(e)
@@ -542,9 +539,9 @@ meta_PPLSi <- function(X,Y,Ipopu,EMsteps=1e2,atol=1e-4,initialGuess=c("equal","o
 
   logvalue[1,]=rep(logl_W(X,Y,Wnw,Cnw,Bnw,signw[1],signw[2],siglatnw[1],siglatnw[2]),nlevels(Ipopu))
   params = lapply(1:nlevels(Ipopu),function(i) list(B_T=Bnw,sigX=signw[1],sigY=signw[2],sigH=siglatnw[1],sigT=siglatnw[2]))
-  Ni = c(1,cumsum(table(Ipopu)))
+  Ni = c(0,cumsum(table(Ipopu)))
   datai = lapply(1:nlevels(Ipopu), function(j){
-    popui = Ni[j]:Ni[j+1]
+    popui = (1+Ni[j]):Ni[j+1]
     list(X = X[popui,], Y = Y[popui,])
   })
   for(i in 1:EMsteps){

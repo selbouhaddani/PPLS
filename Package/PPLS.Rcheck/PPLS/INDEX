@@ -7,6 +7,10 @@ Probabilistic-PLS       PPLS: Probabilistic Partial Least Squares
 fconstraint             Defines an appropriate list with chosen
                         constraints
 logl_W                  Calculates loglikelihood for PPLS model.
+meta_EMstep             Performs one EM step (use PPLS for fitting a
+                        PPLS model)
+meta_PPLSi              Performs PPLS fit in one direction. (use PPLS
+                        for fitting a PPLS model)
 plot.PPLS               Plot function for class PPLS.
 print.PPLS              Print function for class PPLS.
 scores.PPLS             Get scores from PPLS fit.

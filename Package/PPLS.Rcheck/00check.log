@@ -1,5 +1,5 @@
 * using log directory 'C:/Users/selbouhaddani/Github/PPLS/Package/PPLS.Rcheck'
-* using R version 3.2.3 (2015-12-10)
+* using R version 3.2.4 (2016-03-10)
 * using platform: x86_64-w64-mingw32 (64-bit)
 * using session charset: ISO8859-1
 * using options '--run-donttest --as-cran'
@@ -39,14 +39,33 @@
 * checking S3 generic/method consistency ... OK
 * checking replacement functions ... OK
 * checking foreign function calls ... OK
-* checking R code for possible problems ... OK
+* checking R code for possible problems ... NOTE
+meta_EMstep: no visible binding for global variable 'W'
+meta_EMstep: no visible binding for global variable 'B_T'
+meta_EMstep: no visible binding for global variable 'sigX'
+meta_EMstep: no visible binding for global variable 'sigY'
+meta_EMstep: no visible binding for global variable 'sigH'
+meta_EMstep: no visible binding for global variable 'sigT'
 * checking Rd files ... OK
 * checking Rd metadata ... OK
 * checking Rd line widths ... OK
 * checking Rd cross-references ... OK
 * checking for missing documentation entries ... OK
 * checking for code/documentation mismatches ... OK
-* checking Rd \usage sections ... OK
+* checking Rd \usage sections ... WARNING
+Undocumented arguments in documentation object 'meta_EMstep'
+  'params'
+Documented arguments not in \usage in documentation object 'meta_EMstep':
+  'B_T.' 'sigX.' 'sigY.' 'sigH.' 'sigT.'
+
+Undocumented arguments in documentation object 'meta_PPLSi'
+  'Ipopu'
+
+Functions with \usage entries need to have the appropriate \alias
+entries, and all their arguments documented.
+The \usage entries must correspond to syntactically valid R code.
+See chapter 'Writing R documentation files' in the 'Writing R
+Extensions' manual.
 * checking Rd contents ... OK
 * checking for unstated dependencies in examples ... OK
 * checking line endings in C/C++/Fortran sources/headers ... OK
@@ -56,4 +75,4 @@
 ** running examples for arch 'x64' ... OK
 * checking PDF version of manual ... OK
 * DONE
-Status: OK
+Status: 1 WARNING, 1 NOTE

@@ -2,15 +2,15 @@
 ** libs
 
 *** arch - i386
-g++ -m32 -I"C:/PROGRA~1/R/R-32~1.3/include" -DNDEBUG    -I"C:/Program Files/R/R-3.2.3/library/Rcpp/include" -I"C:/Program Files/R/R-3.2.3/library/RcppEigen/include" -I"d:/RCompile/r-compiling/local/local323/include"     -O2 -Wall  -mtune=core2 -c RcppExports.cpp -o RcppExports.o
-g++ -m32 -I"C:/PROGRA~1/R/R-32~1.3/include" -DNDEBUG    -I"C:/Program Files/R/R-3.2.3/library/Rcpp/include" -I"C:/Program Files/R/R-3.2.3/library/RcppEigen/include" -I"d:/RCompile/r-compiling/local/local323/include"     -O2 -Wall  -mtune=core2 -c loglC.cpp -o loglC.o
-g++ -m32 -shared -s -static-libgcc -o PPLS.dll tmp.def RcppExports.o loglC.o -Ld:/RCompile/r-compiling/local/local323/lib/i386 -Ld:/RCompile/r-compiling/local/local323/lib -LC:/PROGRA~1/R/R-32~1.3/bin/i386 -lR
+g++ -m32 -I"C:/PROGRA~1/R/R-32~1.4/include" -DNDEBUG    -I"C:/Program Files/R/R-3.2.4/library/Rcpp/include" -I"C:/Program Files/R/R-3.2.4/library/RcppEigen/include" -I"d:/RCompile/r-compiling/local/local323/include"     -O2 -Wall  -mtune=core2 -c RcppExports.cpp -o RcppExports.o
+g++ -m32 -I"C:/PROGRA~1/R/R-32~1.4/include" -DNDEBUG    -I"C:/Program Files/R/R-3.2.4/library/Rcpp/include" -I"C:/Program Files/R/R-3.2.4/library/RcppEigen/include" -I"d:/RCompile/r-compiling/local/local323/include"     -O2 -Wall  -mtune=core2 -c loglC.cpp -o loglC.o
+g++ -m32 -shared -s -static-libgcc -o PPLS.dll tmp.def RcppExports.o loglC.o -Ld:/RCompile/r-compiling/local/local323/lib/i386 -Ld:/RCompile/r-compiling/local/local323/lib -LC:/PROGRA~1/R/R-32~1.4/bin/i386 -lR
 installing to C:/Users/selbouhaddani/Github/PPLS/Package/PPLS.Rcheck/PPLS/libs/i386
 
 *** arch - x64
-g++ -m64 -I"C:/PROGRA~1/R/R-32~1.3/include" -DNDEBUG    -I"C:/Program Files/R/R-3.2.3/library/Rcpp/include" -I"C:/Program Files/R/R-3.2.3/library/RcppEigen/include" -I"d:/RCompile/r-compiling/local/local323/include"     -O2 -Wall  -mtune=core2 -c RcppExports.cpp -o RcppExports.o
-g++ -m64 -I"C:/PROGRA~1/R/R-32~1.3/include" -DNDEBUG    -I"C:/Program Files/R/R-3.2.3/library/Rcpp/include" -I"C:/Program Files/R/R-3.2.3/library/RcppEigen/include" -I"d:/RCompile/r-compiling/local/local323/include"     -O2 -Wall  -mtune=core2 -c loglC.cpp -o loglC.o
-g++ -m64 -shared -s -static-libgcc -o PPLS.dll tmp.def RcppExports.o loglC.o -Ld:/RCompile/r-compiling/local/local323/lib/x64 -Ld:/RCompile/r-compiling/local/local323/lib -LC:/PROGRA~1/R/R-32~1.3/bin/x64 -lR
+g++ -m64 -I"C:/PROGRA~1/R/R-32~1.4/include" -DNDEBUG    -I"C:/Program Files/R/R-3.2.4/library/Rcpp/include" -I"C:/Program Files/R/R-3.2.4/library/RcppEigen/include" -I"d:/RCompile/r-compiling/local/local323/include"     -O2 -Wall  -mtune=core2 -c RcppExports.cpp -o RcppExports.o
+g++ -m64 -I"C:/PROGRA~1/R/R-32~1.4/include" -DNDEBUG    -I"C:/Program Files/R/R-3.2.4/library/Rcpp/include" -I"C:/Program Files/R/R-3.2.4/library/RcppEigen/include" -I"d:/RCompile/r-compiling/local/local323/include"     -O2 -Wall  -mtune=core2 -c loglC.cpp -o loglC.o
+g++ -m64 -shared -s -static-libgcc -o PPLS.dll tmp.def RcppExports.o loglC.o -Ld:/RCompile/r-compiling/local/local323/lib/x64 -Ld:/RCompile/r-compiling/local/local323/lib -LC:/PROGRA~1/R/R-32~1.4/bin/x64 -lR
 installing to C:/Users/selbouhaddani/Github/PPLS/Package/PPLS.Rcheck/PPLS/libs/x64
 ** R
 ** preparing package for lazy loading
