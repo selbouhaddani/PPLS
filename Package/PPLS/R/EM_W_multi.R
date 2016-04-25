@@ -20,6 +20,7 @@
 #' @import ggplot2
 #' @import RcppEigen
 #' @import O2PLS
+#' @import magrittr
 #' @useDynLib PPLS
 NULL
 
@@ -474,8 +475,9 @@ meta_EMstep <- function(X , Y , W. = W, C. = C, Ipopu, params)
     e2 = meta_Mstep(e)
     return(e2)
   })
-  ret1$W. = orth(rowSums(sapply(ret1,function(e) e$Cxt)))
-  ret1$C. = orth(rowSums(sapply(ret1[-which(names(ret1)=="W.")],function(e) e$Cyu)))
+
+  ret1$W. = orth(rowSums(sapply(ret1,function(e) c(sign(crossprod(ret1[[1]]$Cxt,e$Cxt)))*e$Cxt)))
+  ret1$C. = orth(rowSums(sapply(ret1[-which(names(ret1)=="W.")],function(e) c(sign(crossprod(ret1[[1]]$Cxt,e$Cxt)))*e$Cyu)))
 
   return(ret1)
 }
@@ -574,6 +576,7 @@ meta_PPLSi <- function(X,Y,Ipopu,EMsteps=1e2,atol=1e-4,initialGuess=c("equal","o
       }
     #on.exit(return(list( W=c(Wnw),C=c(Cnw),B=Bnw,sig=c(signw,siglatnw),logvalue=logvalue[0:i+1],Last_increment = logvalue[i]-logvalue[i-1], Number_steps = i)))
   }
+  #vars = list(W = )
 
   #last_incr = logvalue[i+1]-logvalue[i]
   #if(any(diff(logvalue[0:i+1])<0)){warning("Not monotone")}
@@ -582,3 +585,196 @@ meta_PPLSi <- function(X,Y,Ipopu,EMsteps=1e2,atol=1e-4,initialGuess=c("equal","o
   ret2 = list(W=c(Wnw),C=c(Cnw), params = params, log = logvalue[1:i+1,])
   return(ret2)
 }
+
+#' Performs the E step
+#' Expectation step
+#'
+#' @param X First dataset.
+#' @param Y Second dataset.
+#' @param W X loadings, p times r.
+#' @param C Y loadings, q times r.
+#' @param B Diagonal regression matrix with positive elements.
+#' @param sigE Positive number. Standard deviation of noise in X
+#' @param sigF Positive number. Standard deviation of noise in Y
+#' @param sigH Positive number. Standard deviation of noise in latent space in Y
+#' @param sigT Diagonal positive matrix. Standard deviations(!) of latent space in X
+#'
+#' @return List with expected first and second moments of the latent variables and noise.
+#' No aggregation is done yet, this means that all Cxx are matrices.
+#' This may be useful to check assumptions of no correlation between the latent variables.
+#' @export
+Expect_M <- function(X,Y,W,C,B,sigE,sigF,sigH,sigT){
+  N = nrow(X)
+  p = ncol(X)
+  q = ncol(Y)
+  a = ncol(W)
+
+  covT = rbind(W%*%sigT^2, C%*%B%*%sigT^2)
+  covU = rbind(W%*%B%*%sigT^2, C%*%B^2%*%sigT^2+sigH^2*C)
+  invS= solve(sseXY_W(W,C,B,sigE,sigF,sigH,sigT))
+
+  mu_T = cbind(X,Y) %*% invS %*% covT
+  mu_U = cbind(X,Y) %*% invS %*% covU
+
+  sigU = sqrt(sigT^2%*%B^2 + diag(sigH^2,ncol(C)))
+  Ctt = sigT^2 - t(covT) %*% invS %*% covT + crossprod(mu_T) / N
+  Cuu = sigU^2 - t(covU) %*% invS %*% covU + crossprod(mu_U) / N
+  Cut = sigT^2 %*% B - t(covU) %*% invS %*% covT + crossprod(mu_U,mu_T) / N
+
+  covE = rbind(diag(sigE^2,p), diag(0,q,p))
+  mu_E = cbind(X,Y) %*% invS %*% covE
+  Cee = diag(sigE^2,p) - t(covE) %*% invS %*% covE + crossprod(mu_E) / N
+
+  covF = rbind(diag(0,p,q), diag(sigF^2,q))
+  mu_F = cbind(X,Y) %*% invS %*% covF
+  Cff = diag(sigF^2,q) - t(covF) %*% invS %*% covF + crossprod(mu_F) / N
+
+  covH = rbind(0*W, sigH^2*C)
+  mu_H = cbind(X,Y) %*% invS %*% covH
+  Chh = diag(sigH^2,ncol(C)) - t(covH) %*% invS %*% covH + crossprod(mu_H) / N
+
+  # mu_T = mu_U = Ctt = Cuu = Cut = Cee = Cff = Chh = NULL
+  # for(i in 1:a){
+  #   Efit = EMstep_W(X, Y, W[,i], C[,i], B[i,i], sigE, sigF, sigH, sigT[i,i])
+  #   mu_T = cbind(mu_T,Efit$mu_T)
+  #   mu_U = cbind(mu_U,Efit$mu_U)
+  #   Ctt = c(Ctt,Efit$Ctt)
+  #   Cut = c(Cut,Efit$Cut)
+  #   Cuu = c(Cuu,Efit$Cuu)
+  #   Cee = as.matrix(Efit$Cee)
+  #   Cff = as.matrix(Efit$Cff)
+  #   Chh = as.matrix(Efit$Chh)
+  # }
+  # Ctt = diag(Ctt,a)
+  # Cut = diag(Cut,a)
+  # Cuu = diag(Cuu,a)
+
+  list(mu_T = mu_T, mu_U = mu_U, Ctt = Ctt, Cuu = Cuu,
+       Cut = Cut, Cee = Cee, Cff = Cff, Chh = Chh)
+}
+
+#' The M step
+#'
+#' Maximization step
+#'
+#' @inheritParams Expect_M
+#' @param fit A list as produced by \code{\link{Expect_M}}
+#'
+#' @return A list with updated estimates W, C, B, sigE, sigF, sigH and sigT.
+#'
+#' @export
+Maximiz_M <- function(fit,X,Y, type = "SVD"){
+  outp = with(fit,{
+    list(
+      W = orth(t(X) %*% mu_T,type=type),
+      C = orth(t(Y) %*% mu_U,type=type),
+      B = Cut %*% solve(Ctt) * diag(1,nrow(Cut)),
+      sigE = sqrt(tr(Cee)/ncol(Cee)),
+      sigF = sqrt(tr(Cff)/ncol(Cff)),
+      sigH = sqrt(tr(Chh)/ncol(Chh)),
+      sigT = sqrt(Ctt * diag(1,nrow(Ctt)))
+    )
+  })
+  return(outp)
+}
+
+#' The PPLS fitting function
+#'
+#' Simultaneous PPLS fitting function
+#'
+#' @inheritParams Expect_M
+#' @inheritParams Maximiz_M
+#' @param a Positive integer, number of components
+#' @param EMsteps Positive integer, number of EM steps
+#' @param atol positive double, convergence criterium
+#'
+#' @return list of class PPLS_simul with expectations, loglikelihoods and estimates.
+#'
+#' @export
+PPLS_simult <- function(X, Y, a, EMsteps = 10, atol = 1e-4, type = "SVD"){
+  p = ncol(X)
+  q = ncol(Y)
+  W. = orth(matrix(rnorm(p*a),p)) #svd(X,nu=0,nv=a)$v
+  C. = orth(matrix(rnorm(q*a),q)) #svd(Y,nu=0,nv=a)$v
+  B. = diag(sort(rnorm(a,mean = 1, sd = .5)),a)
+  sigE. = 1/p
+  sigF. = 1/q
+  sigH. = 0.1/a
+  sigT. = diag(1,a)
+  logl_incr = 1:EMsteps*NA
+  for(i in 1:EMsteps){
+    Expect_M(X,Y,W.,C.,B.,sigE.,sigF.,sigH.,sigT.) %>% Maximiz_M(X,Y) -> outp
+    W. = outp$W
+    C. = outp$C
+    B. = outp$B
+    sigE. = outp$sigE
+    sigF. = outp$sigF
+    sigH. = outp$sigH
+    sigT. = outp$sigT
+
+    logl_incr[i] = logl_W(X,Y,W.,C.,B.,sigE.,sigF.,sigH.,sigT.)
+    if(i > 1 && diff(logl_incr)[i-1] < atol){ break}
+  }
+  signLoad = sign(diag(sigT. %*% B.))
+  rotLoad = order(diag(sigT. %*% B. %*% diag(signLoad)), decreasing=TRUE)
+  outp$W = W.[,rotLoad] %*% diag(signLoad, a)
+  outp$C = C.[,rotLoad] %*% diag(signLoad, a)
+  outp$B = diag(diag(B. %*% diag(signLoad, a))[rotLoad])
+  outp$sigT = diag(diag(sigT.)[rotLoad])
+  logl_incr = logl_incr[1:i]
+  if(any(diff(logl_incr) < 0)) warning("Negative increments of likelihood")
+  Eout = Expect_M(X,Y,W.,C.,B.,sigE.,sigF.,sigH.,sigT.)
+  outpt = list(Expectations = Eout, loglik = logl_incr, estimates = outp)
+
+  class(outpt) <- "PPLS_simult"
+  outpt
+}
+
+# mseLoadings <- function(W0, W1, W2 = NULL, W3 = NULL){
+#   a = ncol(W0)
+#   W1 = W1%*%sign(crossprod(W1,W0)*diag(a))
+#   if(!is.null(W2)) W2 = W2%*%sign(crossprod(W2,W0)*diag(a))
+#   if(!is.null(W3)) W3 = W3%*%sign(crossprod(W3,W0)*diag(a))
+#
+#   sapply(list(W1 = W1, W2 = W2, W3 = W3),function(e){if(!is.null(e)) mse(W0, e)})
+# }
+
+#' Variances for PPLS_simult
+#'
+#' Calculates asymptotic variances for PPLS loadings
+#'
+#' @inheritParams Expect_M
+#' @inheritParams Maximiz_M
+#' @inheritParams PPLS_simult
+#' @param data Data matrix, X or Y
+#' @param XorY Which data matrix did you supply, X or Y?
+#'
+#' @return SE's for the loadings of corresponding data (so W or C)
+variances.PPLS_simult <- function(fit, data, XorY = c("X", "Y")){
+  W = fit$estim[ifelse(XorY=="X", "W", "C")][[1]]
+  X = data
+  Ctt = fit$Expec[ifelse(XorY=="X", "Ctt", "Cuu")][[1]]
+  mu_T = fit$Expec[ifelse(XorY=="X", "mu_T", "mu_U")][[1]]
+  outp <- lapply(1:a, function(i) {
+    W = as.matrix(W[,i])
+    Ctt = t(Ctt[i,i])
+    mu_T = mu_T[,i]
+    Vt = Ctt - crossprod(mu_T)
+    Cxt = t(X) %*% mu_T
+    B_star = c(Ctt)/(4*fit$estim$sigE^2) * (diag(1,ncol(X)) - tcrossprod(W))
+
+    SSt_expec = t(X) %*% diag(c(Ctt),nrow(X)) %*% X - t(X) %*% mu_T %*% (Ctt + 2*Vt) %*% t(W) -
+      W %*% (Ctt + 2*Vt) %*% t(mu_T) %*% X + W %*% (Ctt^2 + 4*t(mu_T)%*%mu_T +2*Vt) %*% t(W)
+    SSt_expec = SSt_expec/(4*fit$estim$sigE^4)
+
+    SSt_star = tcrossprod(Cxt - W*c(Ctt))#Cxt%*%t(Cxt) - Cxt%*%Ctt%*%t(W) - W%*%Ctt%*%t(Cxt) + W%*%Ctt^2%*%t(W)
+    SSt_star = SSt_star/(4*fit$estim$sigE^4)
+
+    Iobs = B_star - SSt_expec + SSt_star
+    list(B_exp = B_star, SSt_exp = SSt_expec, SSt_star = SSt_star)
+  })
+  outp$seLoad = sapply(1:a, function(i) with(outp[[i]], sqrt(-diag(solve(B_exp - SSt_exp + SSt_star)))))
+  outp
+  #aparte matrices
+}
+

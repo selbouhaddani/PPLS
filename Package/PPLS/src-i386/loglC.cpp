@@ -361,7 +361,7 @@ List EMstepC_fast(Eigen::VectorXd W,Eigen::VectorXd C,double B,
 
   VectorXd mu_U = Xw *(-sig2T*B*c1 + -c2*(sig2T*B*B+sig2H) + 1/sig2X*B*sig2T) + Yc *(-c2*B*sig2T + -c3*(sig2T*B*B+sig2H) + 1/sig2Y*(sig2T*B*B+sig2H));
   VectorXd Cyu = Y.transpose() * mu_U / N;
-  //double Cuu = (sig2T*B*B+sig2H) - (-(c1-1/sig2X)*sig2T*sig2T*B*B - 2*sig2T*B*(sig2T*B*B+sig2H)*c2 - pow(sig2T*B*B+sig2H,2)*(c3-1/sig2Y)) + mu_U.squaredNorm() / N;
+  double Cuu = (sig2T*B*B+sig2H) - (-(c1-1/sig2X)*sig2T*sig2T*B*B - 2*sig2T*B*(sig2T*B*B+sig2H)*c2 - pow(sig2T*B*B+sig2H,2)*(c3-1/sig2Y)) + mu_U.squaredNorm() / N;
 
   double Cut = sig2T*B - (-sig2T*sig2T*B*(c1-1/sig2X) - sig2T*sig2T*B*B*c2 - sig2T*(sig2T*B*B+sig2H)*c2 - (sig2T*B*B+sig2H)*sig2T*B*(c3-1/sig2Y)) + mu_U.dot(mu_T)/N;
 
@@ -381,6 +381,8 @@ List EMstepC_fast(Eigen::VectorXd W,Eigen::VectorXd C,double B,
   siglathat(0) = sqrt(Chh); siglathat(1) = sqrt(Ctt);
   List ret;
   // // // // //  Maximizations ------------------------------------------------------------------------------
+  ret["mu_T"] = mu_T;
+  ret["mu_U"] = mu_U;
   ret["W"] = Cxt.normalized();
   ret["C"] = Cyu.normalized();
   ret["B"] = Cut / Ctt;
@@ -388,6 +390,7 @@ List EMstepC_fast(Eigen::VectorXd W,Eigen::VectorXd C,double B,
   ret["siglathat"] = siglathat;
   ret["Cut"] = Cut;
   ret["Ctt"] = Ctt;
+  ret["Cuu"] = Cuu;
   ret["Cee"] = Cee;
   ret["Cff"] = Cff;
   ret["Chh"] = Chh;
@@ -434,6 +437,10 @@ List meta_Estep(Eigen::VectorXd W,Eigen::VectorXd C,double B,
   List ret;
   ret["Cxt"] = Cxt;
   ret["Cyu"] = Cyu;
+  ret["mu_T"] = mu_T;
+  ret["mu_U"] = mu_U;
+  ret["Vt"] = sig2T - sig2T*sig2T*(-c1 - 2*B*c2 - B*B*(c3-1/sig2Y) + 1/sig2X);
+  ret["Vu"] = (sig2T*B*B+sig2H) - (-(c1-1/sig2X)*sig2T*sig2T*B*B - 2*sig2T*B*(sig2T*B*B+sig2H)*c2 - pow(sig2T*B*B+sig2H,2)*(c3-1/sig2Y));
   ret["Cut"] = Cut;
   ret["Ctt"] = Ctt;
   ret["Cee"] = Cee;
