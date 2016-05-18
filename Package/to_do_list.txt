@@ -1,3 +1,6 @@
+Add automatic scaling of X and Y.
+rewrite for population correction..
+
 create Jackknife function 
 create plot.PPLS (scores,loadings,sigs,logL)
 modify fit afterwards (add,correct for,rm,modify)
