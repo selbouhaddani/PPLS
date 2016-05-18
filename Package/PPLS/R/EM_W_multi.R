@@ -687,10 +687,12 @@ Expect_M <- function(X,Y,W,C,B,sigE,sigF,sigH,sigT,debug=F){
   c3 = diag(c3, a)
 
   varU = sigT^2%*%B^2 + diag(sigH^2,a)
-  mu_T = sigE^-2 * X%*%W%*%sigT^2 + sigF^-2 * Y%*%C%*%sigT^2%*%B - X%*%W%*%c1%*%sigT^2 -
-    X%*%W%*%c2%*%sigT^2%*%B - Y%*%C%*%c2%*%sigT^2 - Y%*%C%*%c3%*%B%*%sigT^2
-  mu_U = sigE^-2 * X%*%W%*%sigT^2%*%B + sigF^-2 * Y%*%C%*%varU -
-    X%*%W%*%c1%*%sigT^2%*%B - X%*%W%*%c2%*%varU - Y%*%C%*%c2%*%sigT^2%*%B - Y%*%C%*%c3%*%varU
+  Xw = X%*%W
+  Yc = Y%*%C
+  mu_T = sigE^-2 * Xw%*%sigT^2 + sigF^-2 * Yc%*%sigT^2%*%B - Xw%*%c1%*%sigT^2 -
+    Xw%*%c2%*%sigT^2%*%B - Yc%*%c2%*%sigT^2 - Yc%*%c3%*%B%*%sigT^2
+  mu_U = sigE^-2 * Xw%*%sigT^2%*%B + sigF^-2 * Yc%*%varU -
+    Xw%*%c1%*%sigT^2%*%B - Xw%*%c2%*%varU - Yc%*%c2%*%sigT^2%*%B - Yc%*%c3%*%varU
 
   Ctt = sigT^2 - sigE^-2*sigT^4 - sigF^-2*sigT^4%*%B^2 + sigT^4%*%c1 + 2*sigT^4%*%B%*%c2 +
     sigT^4%*%B^2%*%c3 + crossprod(mu_T) / N
@@ -699,13 +701,13 @@ Expect_M <- function(X,Y,W,C,B,sigE,sigF,sigH,sigT,debug=F){
   Cut = sigT^2 %*% B - sigE^-2*sigT^4%*%B - sigF^-2*sigT^2%*%B%*%varU + sigT^4%*%B%*%c1 +
     sigT^2%*%varU%*%c2 + sigT^4%*%B^2%*%c2 + sigT^2%*%B%*%varU%*%c3 + crossprod(mu_U,mu_T) / N
 
-  mu_E = X - sigE^2*X%*%W%*%c1%*%t(W) - sigE^2*Y%*%C%*%c2%*%t(W)
+  mu_E = X - sigE^2*Xw%*%c1%*%t(W) - sigE^2*Yc%*%c2%*%t(W)
   Cee = p*sigE^2 - p*sigE^2 + sigE^4*sum(c1) + ssq(mu_E) / N
 
-  mu_F = Y - sigF^2*Y%*%C%*%c3%*%t(C) - sigF^2*X%*%W%*%c2%*%t(C)
+  mu_F = Y - sigF^2*Yc%*%c3%*%t(C) - sigF^2*Xw%*%c2%*%t(C)
   Cff = q*sigF^2 - q*sigF^2 + sigF^4*sum(c3) + ssq(mu_F) / N
 
-  mu_H = sigF^-2*sigH^2*Y%*%C - sigH^2*(X%*%W%*%c2 + Y%*%C%*%c3)
+  mu_H = sigF^-2*sigH^2*Yc - sigH^2*(Xw%*%c2 + Yc%*%c3)
   Chh = diag(sigH^2 - sigH^4/sigF^2,a) + sigH^4*c3 + crossprod(mu_H) / N
   ##############
 
@@ -756,7 +758,7 @@ PPLS_simult <- function(X, Y, a, EMsteps = 10, atol = 1e-4, type = "SVD"){
   q = ncol(Y)
   W. = orth(matrix(rnorm(p*a),p)) #svd(X,nu=0,nv=a)$v
   C. = orth(matrix(rnorm(q*a),q)) #svd(Y,nu=0,nv=a)$v
-  B. = diag(sort(rnorm(a,mean = 1, sd = .5)),a)
+  B. = diag(sort(abs(rnorm(a,0, .5)),T),a)
   sigE. = 1/p
   sigF. = 1/q
   sigH. = 0.1/a
