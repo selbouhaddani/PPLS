@@ -21,6 +21,7 @@
 #' @import RcppEigen
 #' @import O2PLS
 #' @import magrittr
+#' @import fBasics
 #' @useDynLib PPLS
 NULL
 
@@ -586,6 +587,35 @@ meta_PPLSi <- function(X,Y,Ipopu,EMsteps=1e2,atol=1e-4,initialGuess=c("equal","o
   return(ret2)
 }
 
+
+#' @keywords internal
+#' @export
+blockm <- function(A,B,C)
+  #input: Matrices A,B,C
+  #output: the block matrix
+  # A    B
+  #t(B)  C
+{
+  M = rbind(cbind(A,B),cbind(t(B),C))
+  return(M)
+}
+
+#' @keywords internal
+#' @export
+sseXY_W <- function(W.=W, C.=C, B_T.=B_T,
+         sigX.=sigX,sigY.=sigY,sigH.=sigH,sigT.=sigT)
+{
+  p = nrow(W.)
+  q = nrow(C.)
+  SX. = tcrossprod(W.%*%sigT.)+sigX.^2*diag(1,nrow=p)
+  SXY. = W.%*%B_T.%*%sigT.^2%*%t(C.)
+  SY. = tcrossprod(C.%*%t(B_T.)%*%sigT.)+tcrossprod(C.)*sigH.^2+sigY.^2*diag(1,nrow=q)
+  #invSX. = woodinv(sigX.,cbind(W.,P_Yosc.))
+  #invSY. = woodinv(sigY.,cbind(C.,P_Xosc.))
+  Sfull = blockm(SX.,SXY.,SY.)
+  return(Sfull)
+}
+
 #' Performs the E step
 #' Expectation step
 #'
@@ -603,12 +633,13 @@ meta_PPLSi <- function(X,Y,Ipopu,EMsteps=1e2,atol=1e-4,initialGuess=c("equal","o
 #' No aggregation is done yet, this means that all Cxx are matrices.
 #' This may be useful to check assumptions of no correlation between the latent variables.
 #' @export
-Expect_M <- function(X,Y,W,C,B,sigE,sigF,sigH,sigT){
+Expect_M <- function(X,Y,W,C,B,sigE,sigF,sigH,sigT,debug=F){
   N = nrow(X)
   p = ncol(X)
   q = ncol(Y)
   a = ncol(W)
 
+  if(debug){
   covT = rbind(W%*%sigT^2, C%*%B%*%sigT^2)
   covU = rbind(W%*%B%*%sigT^2, C%*%B^2%*%sigT^2+sigH^2*C)
   invS= solve(sseXY_W(W,C,B,sigE,sigF,sigH,sigT))
@@ -633,24 +664,53 @@ Expect_M <- function(X,Y,W,C,B,sigE,sigF,sigH,sigT){
   mu_H = cbind(X,Y) %*% invS %*% covH
   Chh = diag(sigH^2,ncol(C)) - t(covH) %*% invS %*% covH + crossprod(mu_H) / N
 
-  # mu_T = mu_U = Ctt = Cuu = Cut = Cee = Cff = Chh = NULL
-  # for(i in 1:a){
-  #   Efit = EMstep_W(X, Y, W[,i], C[,i], B[i,i], sigE, sigF, sigH, sigT[i,i])
-  #   mu_T = cbind(mu_T,Efit$mu_T)
-  #   mu_U = cbind(mu_U,Efit$mu_U)
-  #   Ctt = c(Ctt,Efit$Ctt)
-  #   Cut = c(Cut,Efit$Cut)
-  #   Cuu = c(Cuu,Efit$Cuu)
-  #   Cee = as.matrix(Efit$Cee)
-  #   Cff = as.matrix(Efit$Cff)
-  #   Chh = as.matrix(Efit$Chh)
-  # }
-  # Ctt = diag(Ctt,a)
-  # Cut = diag(Cut,a)
-  # Cuu = diag(Cuu,a)
+  return(list(mu_T = mu_T, mu_U = mu_U, Ctt = Ctt, Cuu = Cuu,
+                        Cut = Cut, Cee = Cee, Cff = Cff, Chh = Chh))
+  }
+
+  ##############
+  sigT = diag(sigT)
+  B = diag(B)
+  g = sapply(1:a, function(i) sigT[i]^2*B[i]^2 + sigH^2)
+  Kw = sapply(1:a, function(i) sigT[i]^2 - sigT[i]^4*B[i]^2/sigF^2 + sigT[i]^4*B[i]^2*g[i]/(sigF^2*(g[i]+sigF^2)))
+  Kc = sapply(1:a, function(i) g[i] - sigT[i]^4*B[i]^2/sigE^2 + sigT[i]^6*B[i]^2/(sigE^2*(sigT[i]^2+sigE^2)))
+  Kwc = sapply(1:a, function(i) sigT[i]^2*B[i]/(sigE^2*sigF^2) - Kc[i]*sigT[i]^2*B[i]/(sigE^2*sigF^2*(Kc[i]+sigF^2)) -
+            sigT[i]^4*B[i]/(sigE^2*sigF^2*(sigT[i]^2+sigE^2)) +
+            Kc[i]*sigT[i]^4*B[i]/(sigE^2*sigF^2*(Kc[i]+sigF^2)*(sigT[i]^2+sigE^2)))
+  c1 = sapply(1:a, function(i) Kw[i] / (sigE^2*(Kw[i] + sigE^2)))
+  c3 = sapply(1:a, function(i) Kc[i] / (sigF^2*(Kc[i] + sigF^2)))
+  c2 = Kwc
+  sigT = diag(sigT, a)
+  B = diag(B, a)
+  c1 = diag(c1, a)
+  c2 = diag(c2, a)
+  c3 = diag(c3, a)
+
+  varU = sigT^2%*%B^2 + diag(sigH^2,a)
+  mu_T = sigE^-2 * X%*%W%*%sigT^2 + sigF^-2 * Y%*%C%*%sigT^2%*%B - X%*%W%*%c1%*%sigT^2 -
+    X%*%W%*%c2%*%sigT^2%*%B - Y%*%C%*%c2%*%sigT^2 - Y%*%C%*%c3%*%B%*%sigT^2
+  mu_U = sigE^-2 * X%*%W%*%sigT^2%*%B + sigF^-2 * Y%*%C%*%varU -
+    X%*%W%*%c1%*%sigT^2%*%B - X%*%W%*%c2%*%varU - Y%*%C%*%c2%*%sigT^2%*%B - Y%*%C%*%c3%*%varU
+
+  Ctt = sigT^2 - sigE^-2*sigT^4 - sigF^-2*sigT^4%*%B^2 + sigT^4%*%c1 + 2*sigT^4%*%B%*%c2 +
+    sigT^4%*%B^2%*%c3 + crossprod(mu_T) / N
+  Cuu = varU - sigE^-2*sigT^4%*%B^2 - sigF^-2*varU^2 + sigT^4%*%B^2%*%c1 +
+    2*sigT^2%*%B%*%varU%*%c2 + varU^2%*%c3 + crossprod(mu_U) / N
+  Cut = sigT^2 %*% B - sigE^-2*sigT^4%*%B - sigF^-2*sigT^2%*%B%*%varU + sigT^4%*%B%*%c1 +
+    sigT^2%*%varU%*%c2 + sigT^4%*%B^2%*%c2 + sigT^2%*%B%*%varU%*%c3 + crossprod(mu_U,mu_T) / N
+
+  mu_E = X - sigE^2*X%*%W%*%c1%*%t(W) - sigE^2*Y%*%C%*%c2%*%t(W)
+  Cee = p*sigE^2 - p*sigE^2 + sigE^4*sum(c1) + ssq(mu_E) / N
+
+  mu_F = Y - sigF^2*Y%*%C%*%c3%*%t(C) - sigF^2*X%*%W%*%c2%*%t(C)
+  Cff = q*sigF^2 - q*sigF^2 + sigF^4*sum(c3) + ssq(mu_F) / N
+
+  mu_H = sigF^-2*sigH^2*Y%*%C - sigH^2*(X%*%W%*%c2 + Y%*%C%*%c3)
+  Chh = diag(sigH^2 - sigH^4/sigF^2,a) + sigH^4*c3 + crossprod(mu_H) / N
+  ##############
 
   list(mu_T = mu_T, mu_U = mu_U, Ctt = Ctt, Cuu = Cuu,
-       Cut = Cut, Cee = Cee, Cff = Cff, Chh = Chh)
+       Cut = Cut, Cee = as.matrix(Cee)/p, Cff = as.matrix(Cff)/p, Chh = Chh)
 }
 
 #' The M step
@@ -716,11 +776,11 @@ PPLS_simult <- function(X, Y, a, EMsteps = 10, atol = 1e-4, type = "SVD"){
     if(i > 1 && diff(logl_incr)[i-1] < atol){ break}
   }
   signLoad = sign(diag(sigT. %*% B.))
-  rotLoad = order(diag(sigT. %*% B. %*% diag(signLoad)), decreasing=TRUE)
+  rotLoad = order(diag(sigT. %*% B. %*% diag(signLoad,a)), decreasing=TRUE)
   outp$W = W.[,rotLoad] %*% diag(signLoad, a)
   outp$C = C.[,rotLoad] %*% diag(signLoad, a)
-  outp$B = diag(diag(B. %*% diag(signLoad, a))[rotLoad])
-  outp$sigT = diag(diag(sigT.)[rotLoad])
+  outp$B = diag(diag(B. %*% diag(signLoad, a))[rotLoad],a)
+  outp$sigT = diag(diag(sigT.)[rotLoad],a)
   logl_incr = logl_incr[1:i]
   if(any(diff(logl_incr) < 0)) warning("Negative increments of likelihood")
   Eout = Expect_M(X,Y,W.,C.,B.,sigE.,sigF.,sigH.,sigT.)
@@ -750,9 +810,11 @@ PPLS_simult <- function(X, Y, a, EMsteps = 10, atol = 1e-4, type = "SVD"){
 #' @param XorY Which data matrix did you supply, X or Y?
 #'
 #' @return SE's for the loadings of corresponding data (so W or C)
+#' @export
 variances.PPLS_simult <- function(fit, data, XorY = c("X", "Y")){
   W = fit$estim[ifelse(XorY=="X", "W", "C")][[1]]
   X = data
+  a = ncol(as.matrix(W))
   Ctt = fit$Expec[ifelse(XorY=="X", "Ctt", "Cuu")][[1]]
   mu_T = fit$Expec[ifelse(XorY=="X", "mu_T", "mu_U")][[1]]
   outp <- lapply(1:a, function(i) {

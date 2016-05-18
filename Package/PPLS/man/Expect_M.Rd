@@ -5,7 +5,7 @@
 \title{Performs the E step
 Expectation step}
 \usage{
-Expect_M(X, Y, W, C, B, sigE, sigF, sigH, sigT)
+Expect_M(X, Y, W, C, B, sigE, sigF, sigH, sigT, debug = F)
 }
 \arguments{
 \item{X}{First dataset.}
