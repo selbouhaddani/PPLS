@@ -1,0 +1,78 @@
+* using log directory 'C:/Users/selbouhaddani/Github/PPLS/Package/PPLS.Rcheck'
+* using R version 3.2.4 (2016-03-10)
+* using platform: x86_64-w64-mingw32 (64-bit)
+* using session charset: ISO8859-1
+* using options '--run-donttest --as-cran'
+* checking for file 'PPLS/DESCRIPTION' ... OK
+* checking extension type ... Package
+* this is package 'PPLS' version '1.0.0'
+* checking package namespace information ... OK
+* checking package dependencies ... OK
+* checking if this is a source package ... OK
+* checking if there is a namespace ... OK
+* checking for executable files ... OK
+* checking for hidden files and directories ... OK
+* checking for portable file names ... OK
+* checking whether package 'PPLS' can be installed ... OK
+* checking installed package size ... OK
+* checking package directory ... OK
+* checking DESCRIPTION meta-information ... OK
+* checking top-level files ... OK
+* checking for left-over files ... OK
+* checking index information ... OK
+* checking package subdirectories ... OK
+* checking R files for non-ASCII characters ... OK
+* checking R files for syntax errors ... OK
+* loading checks for arch 'i386'
+** checking whether the package can be loaded ... OK
+** checking whether the package can be loaded with stated dependencies ... OK
+** checking whether the package can be unloaded cleanly ... OK
+** checking whether the namespace can be loaded with stated dependencies ... OK
+** checking whether the namespace can be unloaded cleanly ... OK
+* loading checks for arch 'x64'
+** checking whether the package can be loaded ... OK
+** checking whether the package can be loaded with stated dependencies ... OK
+** checking whether the package can be unloaded cleanly ... OK
+** checking whether the namespace can be loaded with stated dependencies ... OK
+** checking whether the namespace can be unloaded cleanly ... OK
+* checking dependencies in R code ... OK
+* checking S3 generic/method consistency ... OK
+* checking replacement functions ... OK
+* checking foreign function calls ... OK
+* checking R code for possible problems ... NOTE
+meta_EMstep: no visible binding for global variable 'W'
+meta_EMstep: no visible binding for global variable 'B_T'
+meta_EMstep: no visible binding for global variable 'sigX'
+meta_EMstep: no visible binding for global variable 'sigY'
+meta_EMstep: no visible binding for global variable 'sigH'
+meta_EMstep: no visible binding for global variable 'sigT'
+* checking Rd files ... OK
+* checking Rd metadata ... OK
+* checking Rd line widths ... OK
+* checking Rd cross-references ... OK
+* checking for missing documentation entries ... OK
+* checking for code/documentation mismatches ... OK
+* checking Rd \usage sections ... WARNING
+Undocumented arguments in documentation object 'meta_EMstep'
+  'params'
+Documented arguments not in \usage in documentation object 'meta_EMstep':
+  'B_T.' 'sigX.' 'sigY.' 'sigH.' 'sigT.'
+
+Undocumented arguments in documentation object 'meta_PPLSi'
+  'Ipopu'
+
+Functions with \usage entries need to have the appropriate \alias
+entries, and all their arguments documented.
+The \usage entries must correspond to syntactically valid R code.
+See chapter 'Writing R documentation files' in the 'Writing R
+Extensions' manual.
+* checking Rd contents ... OK
+* checking for unstated dependencies in examples ... OK
+* checking line endings in C/C++/Fortran sources/headers ... OK
+* checking compiled code ... OK
+* checking examples ...
+** running examples for arch 'i386' ... OK
+** running examples for arch 'x64' ... OK
+* checking PDF version of manual ... OK
+* DONE
+Status: 1 WARNING, 1 NOTE

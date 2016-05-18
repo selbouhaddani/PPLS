@@ -1,0 +1,167 @@
+
+R version 3.2.4 (2016-03-10) -- "Very Secure Dishes"
+Copyright (C) 2016 The R Foundation for Statistical Computing
+Platform: x86_64-w64-mingw32/x64 (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> pkgname <- "PPLS"
+> source(file.path(R.home("share"), "R", "examples-header.R"))
+> options(warn = 1)
+> options(pager = "console")
+> base::assign(".ExTimings", "PPLS-Ex.timings", pos = 'CheckExEnv')
+> base::cat("name\tuser\tsystem\telapsed\n", file=base::get(".ExTimings", pos = 'CheckExEnv'))
+> base::assign(".format_ptime",
++ function(x) {
++   if(!is.na(x[4L])) x[1L] <- x[1L] + x[4L]
++   if(!is.na(x[5L])) x[2L] <- x[2L] + x[5L]
++   options(OutDec = '.')
++   format(x[1L:3L], digits = 7L)
++ },
++ pos = 'CheckExEnv')
+> 
+> ### * </HEADER>
+> library('PPLS')
+> 
+> base::assign(".oldSearch", base::search(), pos = 'CheckExEnv')
+> cleanEx()
+> nameEx("PPLS")
+> ### * PPLS
+> 
+> flush(stderr()); flush(stdout())
+> 
+> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+> ### Name: PPLS
+> ### Title: Performs PPLS fit.
+> ### Aliases: PPLS
+> 
+> ### ** Examples
+> 
+> exX = scale(matrix(rnorm(100*10),100,10))
+> exY = scale(matrix(rnorm(100*12),100,12))
+> PPLS(X = exX, Y = exY, nr_comp = 3, EMsteps = 1e4)
+  LV ssq(T)/ssq(X) ssq(U)/ssq(Y) sigH^2/ssq(U)  log LR #steps last incr
+1  1         0.049         0.047         0.023   0.000    729         0
+2  2         0.117         0.093         0.023  10.631    811         0
+3  3         0.197         0.271         0.223 -12.895     87         0
+> PPLS(X = exX, Y = exY, nr_comp = 3, EMsteps = 1e4, initialGuess = "random")
+  LV ssq(T)/ssq(X) ssq(U)/ssq(Y) sigH^2/ssq(U)  log LR #steps last incr
+1  1         0.049         0.047         0.023   0.000    733         0
+2  2         0.117         0.093         0.023  10.631    761         0
+3  3         0.197         0.271         0.223 -12.899     92         0
+> 
+> # devtools::install_github("selbouhaddani/O2PLS")
+> if(require(O2PLS)){
++  exinitGuess = list(W = orth(1:10), C = orth(1:12), B = 0.1,
++                      sigE = 1,sigF = 1,sigH = 1,sigT = 0.1)
++  PPLS(X = exX, Y = exY, nr_comp = 1, EMsteps = 1e4,
++        initialGuess = "custom", customGuess = exinitGuess)
++ }
+Loading required package: O2PLS
+  LV ssq(T)/ssq(X) ssq(U)/ssq(Y) sigH^2/ssq(U) log LR #steps last incr
+1  1         0.047         0.048         0.017      0    863         0
+> exconstraints = list(fconstraint(list(B = 1)) , fconstraint(list(sigT = 1)))
+> PPLS(X = exX, Y = exY, nr_comp = 2, EMsteps = 1e4, constraints = exconstraints)
+constraints used on B 
+
+constraints used on sigT 
+
+  LV ssq(T)/ssq(X) ssq(U)/ssq(Y) sigH^2/ssq(U) log LR #steps last incr
+1  1         0.052         0.045         0.027  0.000    667         0
+2  2         0.161         0.091         0.026  8.699    862         0
+> 
+> 
+> 
+> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
+> base::cat("PPLS", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+> cleanEx()
+
+detaching 'package:O2PLS'
+
+> nameEx("fconstraint")
+> ### * fconstraint
+> 
+> flush(stderr()); flush(stdout())
+> 
+> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+> ### Name: fconstraint
+> ### Title: Defines an appropriate list with chosen constraints
+> ### Aliases: fconstraint
+> 
+> ### ** Examples
+> 
+> fconstraint(list(sigH=.1))
+$W
+NULL
+
+$C
+NULL
+
+$B
+NULL
+
+$sigE
+NULL
+
+$sigF
+NULL
+
+$sigH
+[1] 0.1
+
+$sigT
+NULL
+
+> fconstraint(list(B=3,sigE=.5))
+$W
+NULL
+
+$C
+NULL
+
+$B
+[1] 3
+
+$sigE
+[1] 0.5
+
+$sigF
+NULL
+
+$sigH
+NULL
+
+$sigT
+NULL
+
+> 
+> 
+> 
+> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
+> base::cat("fconstraint", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+> ### * <FOOTER>
+> ###
+> options(digits = 7L)
+> base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
+Time elapsed:  3.29 0.08 3.39 NA NA 
+> grDevices::dev.off()
+null device 
+          1 
+> ###
+> ### Local variables: ***
+> ### mode: outline-minor ***
+> ### outline-regexp: "\\(> \\)?### [*]+" ***
+> ### End: ***
+> quit('no')

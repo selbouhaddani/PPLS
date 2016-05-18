@@ -78,7 +78,7 @@ List loglC(Eigen::MatrixXd W,Eigen::MatrixXd C,Eigen::MatrixXd P_Yosc,Eigen::Mat
     }
     double som2 = 0;
     for(int k=0;k<N;k++){som2 += Dat.row(k) * invS * (Dat.row(k)).transpose();}
-    double Loglik = - 0.5*N*Logdiag.sum() - 0.5 * som2;
+    double Loglik = - 0.5*N*p*log(2*M_PI) - 0.5*N*Logdiag.sum() - 0.5 * som2;
 
     List ret;
     //cout << Loglik << endl;
@@ -98,7 +98,7 @@ List loglC(Eigen::MatrixXd W,Eigen::MatrixXd C,Eigen::MatrixXd P_Yosc,Eigen::Mat
 
     double som2 = 0;
     for(int k=0;k<N;k++){som2 += Dat.row(k) * invS * (Dat.row(k)).transpose();}
-    double Loglik = - 0.5*N*Logdiag - 0.5 * som2;
+    double Loglik = - 0.5*N*p*log(2*M_PI) - 0.5*N*Logdiag - 0.5 * som2;
 
     List ret;
     //cout << Logdiag << endl;
@@ -333,13 +333,71 @@ double loglC_fast(Eigen::MatrixXd W,Eigen::MatrixXd C,Eigen::MatrixXd X, Eigen::
   MatrixXd YC = Y*C;
   double traceL = 1/sig2X * X.array().square().sum() + 1/sig2Y * Y.array().square().sum();
   for(int i=0;i<a;i++) traceL += -c1(i)*(XW.col(i)).squaredNorm() - 2*c2(i)*(XW.col(i)).dot(YC.col(i)) - c3(i)*(YC.col(i)).squaredNorm();
-  double Loglik = - 0.5*N*Logdiag - 0.5 * traceL;
+  double Loglik = - 0.5*N*p*log(2*M_PI) - 0.5*N*Logdiag - 0.5 * traceL;
   return Loglik;
 }
 
-
 // [[Rcpp::export]]
 List EMstepC_fast(Eigen::VectorXd W,Eigen::VectorXd C,double B,
+                  Eigen::MatrixXd X, Eigen::MatrixXd Y,double sigX,double sigY,double sigH,double sigT,double c1, double c2, double c3)
+{
+  double sig2X = sigX*sigX;
+  double sig2Y = sigY*sigY;
+  double sig2H = sigH*sigH;
+  double sig2T = sigT*sigT;
+
+  int N = X.rows();
+  int p = W.size();
+  int q = C.size();
+
+  VectorXd Xw = X*W; VectorXd Yc = Y*C;
+  // // // // //  Expectations------------------------------------------------------------------------------
+  // // // For T ----------------------------
+  VectorXd mu_T = Xw *sig2T*(-c1 + -c2*B + 1/sig2X) + Yc *sig2T*(-c2 + -c3*B + 1/sig2Y*B);
+  VectorXd Cxt = X.transpose() * mu_T / N;
+  double Ctt = sig2T - sig2T*sig2T*(-c1 - 2*B*c2 - B*B*(c3-1/sig2Y) + 1/sig2X) + mu_T.squaredNorm()/N;
+
+
+  VectorXd mu_U = Xw *(-sig2T*B*c1 + -c2*(sig2T*B*B+sig2H) + 1/sig2X*B*sig2T) + Yc *(-c2*B*sig2T + -c3*(sig2T*B*B+sig2H) + 1/sig2Y*(sig2T*B*B+sig2H));
+  VectorXd Cyu = Y.transpose() * mu_U / N;
+  double Cuu = (sig2T*B*B+sig2H) - (-(c1-1/sig2X)*sig2T*sig2T*B*B - 2*sig2T*B*(sig2T*B*B+sig2H)*c2 - pow(sig2T*B*B+sig2H,2)*(c3-1/sig2Y)) + mu_U.squaredNorm() / N;
+
+  double Cut = sig2T*B - (-sig2T*sig2T*B*(c1-1/sig2X) - sig2T*sig2T*B*B*c2 - sig2T*(sig2T*B*B+sig2H)*c2 - (sig2T*B*B+sig2H)*sig2T*B*(c3-1/sig2Y)) + mu_U.dot(mu_T)/N;
+
+  double Ceetmp = c1*c1*sig2X*sig2X*(Xw).squaredNorm() + X.array().square().sum() + c2*c2*sig2X*sig2X*(Yc).squaredNorm() -
+    2*c1*sig2X*(Xw).squaredNorm() + 2*c1*c2*sig2X*sig2X*(Xw).dot(Yc) - 2*c2*sig2X*(Xw).dot(Yc);
+  double Cee = sig2X - (-sig2X*sig2X*(c1) + p*sig2X )/p + ( Ceetmp )/N/p;
+
+  double Cfftmp = c3*c3*sig2Y*sig2Y*(Yc).squaredNorm() + Y.array().square().sum() + c2*c2*sig2Y*sig2Y*(Xw).squaredNorm() -
+    2*c3*sig2Y*(Yc).squaredNorm() + 2*c3*c2*sig2Y*sig2Y*(Yc).dot(Xw) - 2*c2*sig2Y*(Yc).dot(Xw);
+  double Cff = sig2Y - (-sig2Y*sig2Y*c3 + q*sig2Y )/q + ( Cfftmp )/N/q;
+
+  double Chh = sig2H - (-sig2H*sig2H*(c3-1/sig2Y)) + (-c2*sig2H*Xw - (c3-1/sig2Y)*sig2H*Yc).squaredNorm()/N;
+
+  Vector2d sighat;
+  Vector2d siglathat;
+  sighat(0) = sqrt(Cee); sighat(1) = sqrt(Cff);
+  siglathat(0) = sqrt(Chh); siglathat(1) = sqrt(Ctt);
+  List ret;
+  // // // // //  Maximizations ------------------------------------------------------------------------------
+  ret["mu_T"] = mu_T;
+  ret["mu_U"] = mu_U;
+  ret["W"] = Cxt.normalized();
+  ret["C"] = Cyu.normalized();
+  ret["B"] = Cut / Ctt;
+  ret["sighat"] = sighat;
+  ret["siglathat"] = siglathat;
+  ret["Cut"] = Cut;
+  ret["Ctt"] = Ctt;
+  ret["Cuu"] = Cuu;
+  ret["Cee"] = Cee;
+  ret["Cff"] = Cff;
+  ret["Chh"] = Chh;
+  return ret;
+}
+
+// [[Rcpp::export]]
+List meta_Estep(Eigen::VectorXd W,Eigen::VectorXd C,double B,
                   Eigen::MatrixXd X, Eigen::MatrixXd Y,double sigX,double sigY,double sigH,double sigT,double c1, double c2, double c3)
 {
   double sig2X = sigX*sigX;
@@ -375,70 +433,42 @@ List EMstepC_fast(Eigen::VectorXd W,Eigen::VectorXd C,double B,
 
   double Chh = sig2H - (-sig2H*sig2H*(c3-1/sig2Y)) + (-c2*sig2H*Xw - (c3-1/sig2Y)*sig2H*Yc).squaredNorm()/N;
 
-  Vector2d sighat;
-  Vector2d siglathat;
-  sighat(0) = sqrt(Cee); sighat(1) = sqrt(Cff);
-  siglathat(0) = sqrt(Chh); siglathat(1) = sqrt(Ctt);
   List ret;
-  // // // // //  Maximizations ------------------------------------------------------------------------------
-  ret["W"] = Cxt.normalized();
-  ret["C"] = Cyu.normalized();
-  ret["B"] = Cut / Ctt;
-  ret["sighat"] = sighat;
-  ret["siglathat"] = siglathat;
+  ret["Cxt"] = Cxt;
+  ret["Cyu"] = Cyu;
+  ret["mu_T"] = mu_T;
+  ret["mu_U"] = mu_U;
+  ret["Vt"] = sig2T - sig2T*sig2T*(-c1 - 2*B*c2 - B*B*(c3-1/sig2Y) + 1/sig2X);
+  ret["Vu"] = (sig2T*B*B+sig2H) - (-(c1-1/sig2X)*sig2T*sig2T*B*B - 2*sig2T*B*(sig2T*B*B+sig2H)*c2 - pow(sig2T*B*B+sig2H,2)*(c3-1/sig2Y));
+  ret["Cut"] = Cut;
+  ret["Ctt"] = Ctt;
+  ret["Cee"] = Cee;
+  ret["Cff"] = Cff;
+  ret["Chh"] = Chh;
   return ret;
-
 }
 
-
 // [[Rcpp::export]]
-List EMstepC_fast_modif(Eigen::VectorXd W,Eigen::VectorXd C,double B,
-                  Eigen::MatrixXd X, Eigen::MatrixXd Y, Eigen::VectorXd Z,double sigX,double sigY,double sigH,double sigT,double c1, double c2, double c3)
-{
-  double sig2X = sigX*sigX;
-  double sig2Y = sigY*sigY;
-  double sig2H = sigH*sigH;
-  double sig2T = sigT*sigT;
-
-  int N = X.rows();
-  int p = W.size();
-  int q = C.size();
-
-  VectorXd Xw = X*W; VectorXd Yc = Y*C;
-  // // // // //  Expectations------------------------------------------------------------------------------
-  // // // For T ----------------------------
-  VectorXd mu_T = Xw *sig2T*(-c1 + -c2*B + 1/sig2X) + Yc *sig2T*(-c2 + -c3*B + 1/sig2Y*B);
-  VectorXd Cxt = X.transpose() * mu_T / N;
-  double Ctt = sig2T - sig2T*sig2T*(-c1 - 2*B*c2 - B*B*(c3-1/sig2Y) + 1/sig2X) + mu_T.squaredNorm()/N;
-
-
-  VectorXd mu_U = Xw *(-sig2T*B*c1 + -c2*(sig2T*B*B+sig2H) + 1/sig2X*B*sig2T) + Yc *(-c2*B*sig2T + -c3*(sig2T*B*B+sig2H) + 1/sig2Y*(sig2T*B*B+sig2H));
-  VectorXd Cyu = Y.transpose() * mu_U / N;
-  //double Cuu = (sig2T*B*B+sig2H) - (-(c1-1/sig2X)*sig2T*sig2T*B*B - 2*sig2T*B*(sig2T*B*B+sig2H)*c2 - pow(sig2T*B*B+sig2H,2)*(c3-1/sig2Y)) + mu_U.squaredNorm() / N;
-
-  double Cut = sig2T*B - (-sig2T*sig2T*B*(c1-1/sig2X) - sig2T*sig2T*B*B*c2 - sig2T*(sig2T*B*B+sig2H)*c2 - (sig2T*B*B+sig2H)*sig2T*B*(c3-1/sig2Y)) + mu_U.dot(mu_T)/N;
-
-  double Ceetmp = c1*c1*sig2X*sig2X*(Xw).squaredNorm() + X.array().square().sum() + c2*c2*sig2X*sig2X*(Yc).squaredNorm() -
-    2*c1*sig2X*(Xw).squaredNorm() + 2*c1*c2*sig2X*sig2X*(Xw).dot(Yc) - 2*c2*sig2X*(Xw).dot(Yc);
-  double Cee = sig2X - (-sig2X*sig2X*(c1) + p*sig2X )/p + ( Ceetmp )/N/p;
-
-  double Cfftmp = c3*c3*sig2Y*sig2Y*(Yc).squaredNorm() + Y.array().square().sum() + c2*c2*sig2Y*sig2Y*(Xw).squaredNorm() -
-    2*c3*sig2Y*(Yc).squaredNorm() + 2*c3*c2*sig2Y*sig2Y*(Yc).dot(Xw) - 2*c2*sig2Y*(Yc).dot(Xw);
-  double Cff = sig2Y - (-sig2Y*sig2Y*c3 + q*sig2Y )/q + ( Cfftmp )/N/q;
-
-  double Chh = sig2H - (-sig2H*sig2H*(c3-1/sig2Y)) + (-c2*sig2H*Xw - (c3-1/sig2Y)*sig2H*Yc).squaredNorm()/N;
+List meta_Mstep(List ret)
+  {
+  VectorXd Cxt = ret["Cxt"];
+  VectorXd Cyu = ret["Cyu"];
+  double Cut = ret["Cut"];
+  double Ctt = ret["Ctt"];
+  double Cee = ret["Cee"];
+  double Cff = ret["Cff"];
+  double Chh = ret["Chh"];
 
   Vector2d sighat;
   Vector2d siglathat;
   sighat(0) = sqrt(Cee); sighat(1) = sqrt(Cff);
   siglathat(0) = sqrt(Chh); siglathat(1) = sqrt(Ctt);
-  List ret;
-  // // // // //  Maximizations ------------------------------------------------------------------------------
-  ret["W"] = (X.transpose()*mu_T * Z.squaredNorm() - (X.transpose()*Z)*Z.dot(mu_T)) / (Z.squaredNorm()*mu_T.squaredNorm() - pow(mu_T.dot(Z),2));
-  ret["C"] = (Y.transpose()*mu_U * Z.squaredNorm() - (Y.transpose()*Z)*Z.dot(mu_U)) / (Z.squaredNorm()*mu_U.squaredNorm() - pow(mu_U.dot(Z),2));
-  ret["B"] = Cut / Ctt;
-  ret["sighat"] = sighat;
-  ret["siglathat"] = siglathat;
-  return ret;
-
+  // // // // //  Maximizations ---------------------------------------------
+  List ret2;
+  ret2["B"] = Cut / Ctt;
+  ret2["sighat"] = sighat;
+  ret2["siglathat"] = siglathat;
+  ret2["Cxt"] = Cxt;
+  ret2["Cyu"] = Cyu;
+  return ret2;
 }
