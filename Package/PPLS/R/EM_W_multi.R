@@ -20,6 +20,8 @@
 #' @import ggplot2
 #' @import RcppEigen
 #' @import O2PLS
+#' @import magrittr
+#' @import fBasics
 #' @useDynLib PPLS
 NULL
 
@@ -415,3 +417,426 @@ scores.PPLS <- function (fit, X, Y, subset = NULL)
   }
   return(rbind(X %*% fit$W[, subset], Y %*% fit$C[, subset]))
 }
+
+
+#' Performs one EM step (use \link{PPLS} for fitting a PPLS model)
+#'
+#' @param X Numeric matrix.
+#' @param Y Numeric matrix.
+#' @param W. Numeric matrix.
+#' @param C. Numeric matrix.
+#' @param B_T. Numeric
+#' @param sigX. Numeric
+#' @param sigY. Numeric
+#' @param sigH. Numeric
+#' @param sigT. Numeric
+#' @param Ipopu indicator of which populations present
+#' @return A list with updated values for\itemize{
+#'    \item{W }{Matrix}
+#'    \item{C }{Matrix}
+#'    \item{B }{Matrix}
+#'    \item{sighat }{Vector containing updated sigX and sigY}
+#'    \item{siglathat }{Vector containing sigH and sigT}
+#'  }
+#' @details This function passes its arguments to EMstepC (a C++ function, see \link{Rcpp}), which returns the expected sufficient statistics.
+#' The maximization is done afterwards in this function. This may become a full C++ function later.
+#'
+#' @export
+meta_EMstep <- function(X , Y , W. = W, C. = C, Ipopu, params)
+{
+  stopifnot(nrow(X) == length(Ipopu))
+  Ipopu = as.factor(Ipopu)
+  N = cumsum(table(Ipopu))
+  W. = as.vector(W.)
+  C. = as.vector(C.)
+
+  ret1 = lapply(1:length(N), function(i){
+    Ni = c(0,N)
+    popui = (1+Ni[i]):Ni[i+1]
+    X = X[popui,]
+    Y = Y[popui,]
+    e = with(params[[i]],{
+      B_T. = B_T[1]
+      sigX. = sigX[1]
+      sigY. = sigY[1]
+      sigH. = sigH[1]
+      sigT. = sigT[1]
+
+      g = sigT.^2*B_T.^2 + sigH.^2
+      Kw = sigT.^2 - sigT.^4*B_T.^2/sigY.^2 + sigT.^4*B_T.^2*g/(sigY.^2*(g+sigY.^2))
+      Kc = g - sigT.^4*B_T.^2/sigX.^2 + sigT.^6*B_T.^2/(sigX.^2*(sigT.^2+sigX.^2))
+      Kwc = sigT.^2*B_T./(sigX.^2*sigY.^2) - Kc*sigT.^2*B_T./(sigX.^2*sigY.^2*(Kc+sigY.^2)) -
+        sigT.^4*B_T./(sigX.^2*sigY.^2*(sigT.^2+sigX.^2)) +
+        Kc*sigT.^4*B_T./(sigX.^2*sigY.^2*(Kc+sigY.^2)*(sigT.^2+sigX.^2))
+      c1 = Kw / (sigX.^2*(Kw + sigX.^2));
+      c3 = Kc / (sigY.^2*(Kc + sigY.^2));
+      c2 = Kwc;
+      meta_Estep(W.,C.,B_T.,X,Y,sigX.,sigY.,sigH.,sigT.,c1,c2,c3)
+    })
+    e2 = meta_Mstep(e)
+    return(e2)
+  })
+
+  ret1$W. = orth(rowSums(sapply(ret1,function(e) c(sign(crossprod(ret1[[1]]$Cxt,e$Cxt)))*e$Cxt)))
+  ret1$C. = orth(rowSums(sapply(ret1[-which(names(ret1)=="W.")],function(e) c(sign(crossprod(ret1[[1]]$Cxt,e$Cxt)))*e$Cyu)))
+
+  return(ret1)
+}
+
+#' Performs PPLS fit in one direction. (use \link{PPLS} for fitting a PPLS model)
+#'
+#' @param X Numeric matrix.
+#' @param Y Numeric matrix.
+#' @param EMsteps strictly positive integer. Denotes the maximum number of EM steps to make.
+#' @param atol Double, convergence criterium for the log-likelihood
+#' @param initialGuess A string. Choose "o2m", "random" or "equal" depending on what type of initial guess you want.
+#' @param customGuess A list with named components W,C,B,sigE,sigF,sigH,sigT.
+#' @param critfunc Function measuring the increment value, i.e. f(L_{i+1} - L_{i}). Usually f == I or f == abs.
+#' @param constraints List. Ideally being constructed with \link{fconstraint}.
+#' @return A list with estimates for\itemize{
+#'    \item{W}{Matrix}
+#'    \item{C}{Matrix}
+#'    \item{B}{Matrix}
+#'    \item{sig}{ Vector containing updated sigX, sigY, sigH and sigT}
+#'    \item{logvalue}{ Vector with last log-likelihood(s)}
+#'    \item{Last_increment}{ Double, value of last increment.}
+#'    \item{Number_steps}{ Integer, number of steps needed to stop.}
+#'  }
+#' @details This function estimates loadings and variances for one direction.
+#'
+#' @export
+meta_PPLSi <- function(X,Y,Ipopu,EMsteps=1e2,atol=1e-4,initialGuess=c("equal","o2m","random","custom"),customGuess=NULL,critfunc=function(x){x},
+                  constraints=fconstraint())
+{
+  stopifnot(nrow(X) == length(Ipopu))
+  Ipopu = as.factor(Ipopu)
+  stopifnot(length(constraints) == 7,all(names(constraints) == c("W","C","B","sigE","sigF","sigH","sigT")))
+  p = ncol(X)
+  q = ncol(Y)
+  N = nrow(X)
+  initialGuess = match.arg(initialGuess)
+  if(!is.null(customGuess)){initialGuess = "custom"}
+  if(initialGuess == "o2m"){
+    sim=o2m(X,Y,1,0,0)
+    Wnw=sim$W.;Cnw=sim$C.;Bnw=sim$B_T.[1];
+    signw=sqrt(c((ssq(X)-ssq(sim$Tt))/N/p,(ssq(Y)-ssq(sim$U))/N/q));
+    siglatnw=sqrt(c(ssq(sim$U)-ssq(sim$Tt*Bnw),ssq(sim$Tt))/N)
+    #ret = list(W=Wnw,C=Cnw,B=Bnw,sig=c(signw,siglatnw))
+  } else if(initialGuess == "random"){
+    Wnw=orth(runif(p));Cnw=orth(runif(q)); Bnw = rchisq(1,1); siglatnw =  rchisq(2,100)/100; signw = rchisq(2,10)/100
+    #ret = list(W=Wnw,C=Cnw,B=Bnw,sig=c(signw,siglatnw))
+  }else if(initialGuess == "equal"){
+    Wnw=orth(rep(1,p));Cnw=orth(rep(1,q)); Bnw = 1; siglatnw =  c(1,1); signw = c(1/p,1/q)
+    #ret = list(W=Wnw,C=Cnw,B=Bnw,sig=c(signw,siglatnw))
+  }else if(initialGuess == "custom"){
+    stopifnot('list' %in% class(customGuess))
+    Wnw = customGuess$W;Cnw=customGuess$C;Bnw=customGuess$B;siglatnw=with(customGuess,c(sigH,sigT));signw=with(customGuess,c(sigE,sigF))
+  }
+  Wnw = with(constraints,if(is.numeric(W)) W else Wnw )
+  Cnw = with(constraints,if(is.numeric(C)) C else Cnw )
+  #Bnw = with(constraints,if(is.numeric(B)) B else Bnw )
+  #signw = with(constraints,c(if(is.numeric(sigE)) sigE else signw[1] , if(is.numeric(sigF)) sigF else signw[2]))
+  #siglatnw = with(constraints,c(if(is.numeric(sigH)) sigH else siglatnw[1] , if(is.numeric(sigT)) sigT else siglatnw[2]))
+
+  logvalue=matrix(NA, EMsteps+1, nlevels(Ipopu))
+
+  logvalue[1,]=rep(logl_W(X,Y,Wnw,Cnw,Bnw,signw[1],signw[2],siglatnw[1],siglatnw[2]),nlevels(Ipopu))
+  params = lapply(1:nlevels(Ipopu),function(i) list(B_T=Bnw,sigX=signw[1],sigY=signw[2],sigH=siglatnw[1],sigT=siglatnw[2]))
+  Ni = c(0,cumsum(table(Ipopu)))
+  datai = lapply(1:nlevels(Ipopu), function(j){
+    popui = (1+Ni[j]):Ni[j+1]
+    list(X = X[popui,], Y = Y[popui,])
+  })
+  for(i in 1:EMsteps){
+#     if(any(signw < 100*.Machine$double.eps)){
+#       return(list(W=NA,C=NA,B=NA,sig=NA,logvalue=NA,Last_increment = NA, Number_steps = i))
+#     }
+    fit=meta_EMstep(X,Y,Wnw,Cnw,Ipopu,params)
+    params = lapply(1:nlevels(Ipopu), function(j){
+      Bnw = (fit[[j]]$B)
+      signw = fit[[j]]$sigh
+      siglatnw = fit[[j]]$sigl
+
+      #Wnw = with(constraints,if(is.numeric(W)) W else Wnw )
+      #Cnw = with(constraints,if(is.numeric(C)) C else Cnw )
+      #Bnw = with(constraints,if(is.numeric(B)) B else Bnw )
+      #signw = with(constraints,c(if(is.numeric(sigE)) sigE else signw[1] , if(is.numeric(sigF)) sigF else signw[2]))
+      #siglatnw = with(constraints,c(if(is.numeric(sigH)) sigH else siglatnw[1] , if(is.numeric(sigT)) sigT else siglatnw[2]))
+      list(B_T=Bnw,sigX=signw[1],sigY=signw[2],sigH=siglatnw[1],sigT=siglatnw[2])
+    })
+    Wnw = (fit$W)
+    #PYonw = (fit$PY)
+    Cnw = (fit$C)
+    #PXonw = (fit$PX)
+    logvalue[i+1,] =
+      sapply(1:nlevels(Ipopu),
+             function(j) with(params[[j]],logl_W(datai[[j]]$X,datai[[j]]$Y,Wnw,Cnw,B_T,sigX,sigY,sigH,sigT)))
+    if(critfunc(sum(logvalue[i+1,])-sum(logvalue[i,]))<atol){
+      message("stopped at ",i,". Last incr ");print(logvalue[i+1,]-logvalue[i,]);
+      break
+      }
+    #on.exit(return(list( W=c(Wnw),C=c(Cnw),B=Bnw,sig=c(signw,siglatnw),logvalue=logvalue[0:i+1],Last_increment = logvalue[i]-logvalue[i-1], Number_steps = i)))
+  }
+  #vars = list(W = )
+
+  #last_incr = logvalue[i+1]-logvalue[i]
+  #if(any(diff(logvalue[0:i+1])<0)){warning("Not monotone")}
+  #if(critfunc(logvalue[i+1]-logvalue[i])>=atol){warning(paste("Not converged, last increment was",critfunc(logvalue[i+1]-logvalue[i])))}
+  #ret2 = list( W=c(Wnw),C=c(Cnw),B=c(Bnw),sig=c(signw,siglatnw),logvalue=logvalue[0:i+1],Last_increment = last_incr, Number_steps = i)
+  ret2 = list(W=c(Wnw),C=c(Cnw), params = params, log = logvalue[1:i+1,])
+  return(ret2)
+}
+
+
+#' @keywords internal
+#' @export
+blockm <- function(A,B,C)
+  #input: Matrices A,B,C
+  #output: the block matrix
+  # A    B
+  #t(B)  C
+{
+  M = rbind(cbind(A,B),cbind(t(B),C))
+  return(M)
+}
+
+#' @keywords internal
+#' @export
+sseXY_W <- function(W.=W, C.=C, B_T.=B_T,
+         sigX.=sigX,sigY.=sigY,sigH.=sigH,sigT.=sigT)
+{
+  p = nrow(W.)
+  q = nrow(C.)
+  SX. = tcrossprod(W.%*%sigT.)+sigX.^2*diag(1,nrow=p)
+  SXY. = W.%*%B_T.%*%sigT.^2%*%t(C.)
+  SY. = tcrossprod(C.%*%t(B_T.)%*%sigT.)+tcrossprod(C.)*sigH.^2+sigY.^2*diag(1,nrow=q)
+  #invSX. = woodinv(sigX.,cbind(W.,P_Yosc.))
+  #invSY. = woodinv(sigY.,cbind(C.,P_Xosc.))
+  Sfull = blockm(SX.,SXY.,SY.)
+  return(Sfull)
+}
+
+#' Performs the E step
+#' Expectation step
+#'
+#' @param X First dataset.
+#' @param Y Second dataset.
+#' @param W X loadings, p times r.
+#' @param C Y loadings, q times r.
+#' @param B Diagonal regression matrix with positive elements.
+#' @param sigE Positive number. Standard deviation of noise in X
+#' @param sigF Positive number. Standard deviation of noise in Y
+#' @param sigH Positive number. Standard deviation of noise in latent space in Y
+#' @param sigT Diagonal positive matrix. Standard deviations(!) of latent space in X
+#'
+#' @return List with expected first and second moments of the latent variables and noise.
+#' No aggregation is done yet, this means that all Cxx are matrices.
+#' This may be useful to check assumptions of no correlation between the latent variables.
+#' @export
+Expect_M <- function(X,Y,W,C,B,sigE,sigF,sigH,sigT,debug=F){
+  N = nrow(X)
+  p = ncol(X)
+  q = ncol(Y)
+  a = ncol(W)
+
+  if(debug){
+  covT = rbind(W%*%sigT^2, C%*%B%*%sigT^2)
+  covU = rbind(W%*%B%*%sigT^2, C%*%B^2%*%sigT^2+sigH^2*C)
+  invS= solve(sseXY_W(W,C,B,sigE,sigF,sigH,sigT))
+
+  mu_T = cbind(X,Y) %*% invS %*% covT
+  mu_U = cbind(X,Y) %*% invS %*% covU
+
+  sigU = sqrt(sigT^2%*%B^2 + diag(sigH^2,ncol(C)))
+  Ctt = sigT^2 - t(covT) %*% invS %*% covT + crossprod(mu_T) / N
+  Cuu = sigU^2 - t(covU) %*% invS %*% covU + crossprod(mu_U) / N
+  Cut = sigT^2 %*% B - t(covU) %*% invS %*% covT + crossprod(mu_U,mu_T) / N
+
+  covE = rbind(diag(sigE^2,p), diag(0,q,p))
+  mu_E = cbind(X,Y) %*% invS %*% covE
+  Cee = diag(sigE^2,p) - t(covE) %*% invS %*% covE + crossprod(mu_E) / N
+
+  covF = rbind(diag(0,p,q), diag(sigF^2,q))
+  mu_F = cbind(X,Y) %*% invS %*% covF
+  Cff = diag(sigF^2,q) - t(covF) %*% invS %*% covF + crossprod(mu_F) / N
+
+  covH = rbind(0*W, sigH^2*C)
+  mu_H = cbind(X,Y) %*% invS %*% covH
+  Chh = diag(sigH^2,ncol(C)) - t(covH) %*% invS %*% covH + crossprod(mu_H) / N
+
+  return(list(mu_T = mu_T, mu_U = mu_U, Ctt = Ctt, Cuu = Cuu,
+                        Cut = Cut, Cee = Cee, Cff = Cff, Chh = Chh))
+  }
+
+  ##############
+  sigT = diag(sigT)
+  B = diag(B)
+  g = sapply(1:a, function(i) sigT[i]^2*B[i]^2 + sigH^2)
+  Kw = sapply(1:a, function(i) sigT[i]^2 - sigT[i]^4*B[i]^2/sigF^2 + sigT[i]^4*B[i]^2*g[i]/(sigF^2*(g[i]+sigF^2)))
+  Kc = sapply(1:a, function(i) g[i] - sigT[i]^4*B[i]^2/sigE^2 + sigT[i]^6*B[i]^2/(sigE^2*(sigT[i]^2+sigE^2)))
+  Kwc = sapply(1:a, function(i) sigT[i]^2*B[i]/(sigE^2*sigF^2) - Kc[i]*sigT[i]^2*B[i]/(sigE^2*sigF^2*(Kc[i]+sigF^2)) -
+            sigT[i]^4*B[i]/(sigE^2*sigF^2*(sigT[i]^2+sigE^2)) +
+            Kc[i]*sigT[i]^4*B[i]/(sigE^2*sigF^2*(Kc[i]+sigF^2)*(sigT[i]^2+sigE^2)))
+  c1 = sapply(1:a, function(i) Kw[i] / (sigE^2*(Kw[i] + sigE^2)))
+  c3 = sapply(1:a, function(i) Kc[i] / (sigF^2*(Kc[i] + sigF^2)))
+  c2 = Kwc
+  sigT = diag(sigT, a)
+  B = diag(B, a)
+  c1 = diag(c1, a)
+  c2 = diag(c2, a)
+  c3 = diag(c3, a)
+
+  varU = sigT^2%*%B^2 + diag(sigH^2,a)
+  mu_T = sigE^-2 * X%*%W%*%sigT^2 + sigF^-2 * Y%*%C%*%sigT^2%*%B - X%*%W%*%c1%*%sigT^2 -
+    X%*%W%*%c2%*%sigT^2%*%B - Y%*%C%*%c2%*%sigT^2 - Y%*%C%*%c3%*%B%*%sigT^2
+  mu_U = sigE^-2 * X%*%W%*%sigT^2%*%B + sigF^-2 * Y%*%C%*%varU -
+    X%*%W%*%c1%*%sigT^2%*%B - X%*%W%*%c2%*%varU - Y%*%C%*%c2%*%sigT^2%*%B - Y%*%C%*%c3%*%varU
+
+  Ctt = sigT^2 - sigE^-2*sigT^4 - sigF^-2*sigT^4%*%B^2 + sigT^4%*%c1 + 2*sigT^4%*%B%*%c2 +
+    sigT^4%*%B^2%*%c3 + crossprod(mu_T) / N
+  Cuu = varU - sigE^-2*sigT^4%*%B^2 - sigF^-2*varU^2 + sigT^4%*%B^2%*%c1 +
+    2*sigT^2%*%B%*%varU%*%c2 + varU^2%*%c3 + crossprod(mu_U) / N
+  Cut = sigT^2 %*% B - sigE^-2*sigT^4%*%B - sigF^-2*sigT^2%*%B%*%varU + sigT^4%*%B%*%c1 +
+    sigT^2%*%varU%*%c2 + sigT^4%*%B^2%*%c2 + sigT^2%*%B%*%varU%*%c3 + crossprod(mu_U,mu_T) / N
+
+  mu_E = X - sigE^2*X%*%W%*%c1%*%t(W) - sigE^2*Y%*%C%*%c2%*%t(W)
+  Cee = p*sigE^2 - p*sigE^2 + sigE^4*sum(c1) + ssq(mu_E) / N
+
+  mu_F = Y - sigF^2*Y%*%C%*%c3%*%t(C) - sigF^2*X%*%W%*%c2%*%t(C)
+  Cff = q*sigF^2 - q*sigF^2 + sigF^4*sum(c3) + ssq(mu_F) / N
+
+  mu_H = sigF^-2*sigH^2*Y%*%C - sigH^2*(X%*%W%*%c2 + Y%*%C%*%c3)
+  Chh = diag(sigH^2 - sigH^4/sigF^2,a) + sigH^4*c3 + crossprod(mu_H) / N
+  ##############
+
+  list(mu_T = mu_T, mu_U = mu_U, Ctt = Ctt, Cuu = Cuu,
+       Cut = Cut, Cee = as.matrix(Cee)/p, Cff = as.matrix(Cff)/p, Chh = Chh)
+}
+
+#' The M step
+#'
+#' Maximization step
+#'
+#' @inheritParams Expect_M
+#' @param fit A list as produced by \code{\link{Expect_M}}
+#'
+#' @return A list with updated estimates W, C, B, sigE, sigF, sigH and sigT.
+#'
+#' @export
+Maximiz_M <- function(fit,X,Y, type = "SVD"){
+  outp = with(fit,{
+    list(
+      W = orth(t(X) %*% mu_T,type=type),
+      C = orth(t(Y) %*% mu_U,type=type),
+      B = Cut %*% solve(Ctt) * diag(1,nrow(Cut)),
+      sigE = sqrt(tr(Cee)/ncol(Cee)),
+      sigF = sqrt(tr(Cff)/ncol(Cff)),
+      sigH = sqrt(tr(Chh)/ncol(Chh)),
+      sigT = sqrt(Ctt * diag(1,nrow(Ctt)))
+    )
+  })
+  return(outp)
+}
+
+#' The PPLS fitting function
+#'
+#' Simultaneous PPLS fitting function
+#'
+#' @inheritParams Expect_M
+#' @inheritParams Maximiz_M
+#' @param a Positive integer, number of components
+#' @param EMsteps Positive integer, number of EM steps
+#' @param atol positive double, convergence criterium
+#'
+#' @return list of class PPLS_simul with expectations, loglikelihoods and estimates.
+#'
+#' @export
+PPLS_simult <- function(X, Y, a, EMsteps = 10, atol = 1e-4, type = "SVD"){
+  p = ncol(X)
+  q = ncol(Y)
+  W. = orth(matrix(rnorm(p*a),p)) #svd(X,nu=0,nv=a)$v
+  C. = orth(matrix(rnorm(q*a),q)) #svd(Y,nu=0,nv=a)$v
+  B. = diag(sort(rnorm(a,mean = 1, sd = .5)),a)
+  sigE. = 1/p
+  sigF. = 1/q
+  sigH. = 0.1/a
+  sigT. = diag(1,a)
+  logl_incr = 1:EMsteps*NA
+  for(i in 1:EMsteps){
+    Expect_M(X,Y,W.,C.,B.,sigE.,sigF.,sigH.,sigT.) %>% Maximiz_M(X,Y) -> outp
+    W. = outp$W
+    C. = outp$C
+    B. = outp$B
+    sigE. = outp$sigE
+    sigF. = outp$sigF
+    sigH. = outp$sigH
+    sigT. = outp$sigT
+
+    logl_incr[i] = logl_W(X,Y,W.,C.,B.,sigE.,sigF.,sigH.,sigT.)
+    if(i > 1 && diff(logl_incr)[i-1] < atol){ break}
+  }
+  signLoad = sign(diag(sigT. %*% B.))
+  rotLoad = order(diag(sigT. %*% B. %*% diag(signLoad,a)), decreasing=TRUE)
+  outp$W = W.[,rotLoad] %*% diag(signLoad, a)
+  outp$C = C.[,rotLoad] %*% diag(signLoad, a)
+  outp$B = diag(diag(B. %*% diag(signLoad, a))[rotLoad],a)
+  outp$sigT = diag(diag(sigT.)[rotLoad],a)
+  logl_incr = logl_incr[1:i]
+  if(any(diff(logl_incr) < 0)) warning("Negative increments of likelihood")
+  Eout = Expect_M(X,Y,W.,C.,B.,sigE.,sigF.,sigH.,sigT.)
+  outpt = list(Expectations = Eout, loglik = logl_incr, estimates = outp)
+
+  class(outpt) <- "PPLS_simult"
+  outpt
+}
+
+# mseLoadings <- function(W0, W1, W2 = NULL, W3 = NULL){
+#   a = ncol(W0)
+#   W1 = W1%*%sign(crossprod(W1,W0)*diag(a))
+#   if(!is.null(W2)) W2 = W2%*%sign(crossprod(W2,W0)*diag(a))
+#   if(!is.null(W3)) W3 = W3%*%sign(crossprod(W3,W0)*diag(a))
+#
+#   sapply(list(W1 = W1, W2 = W2, W3 = W3),function(e){if(!is.null(e)) mse(W0, e)})
+# }
+
+#' Variances for PPLS_simult
+#'
+#' Calculates asymptotic variances for PPLS loadings
+#'
+#' @inheritParams Expect_M
+#' @inheritParams Maximiz_M
+#' @inheritParams PPLS_simult
+#' @param data Data matrix, X or Y
+#' @param XorY Which data matrix did you supply, X or Y?
+#'
+#' @return SE's for the loadings of corresponding data (so W or C)
+#' @export
+variances.PPLS_simult <- function(fit, data, XorY = c("X", "Y")){
+  W = fit$estim[ifelse(XorY=="X", "W", "C")][[1]]
+  X = data
+  a = ncol(as.matrix(W))
+  Ctt = fit$Expec[ifelse(XorY=="X", "Ctt", "Cuu")][[1]]
+  mu_T = fit$Expec[ifelse(XorY=="X", "mu_T", "mu_U")][[1]]
+  outp <- lapply(1:a, function(i) {
+    W = as.matrix(W[,i])
+    Ctt = t(Ctt[i,i])
+    mu_T = mu_T[,i]
+    Vt = Ctt - crossprod(mu_T)
+    Cxt = t(X) %*% mu_T
+    B_star = c(Ctt)/(4*fit$estim$sigE^2) * (diag(1,ncol(X)) - tcrossprod(W))
+
+    SSt_expec = t(X) %*% diag(c(Ctt),nrow(X)) %*% X - t(X) %*% mu_T %*% (Ctt + 2*Vt) %*% t(W) -
+      W %*% (Ctt + 2*Vt) %*% t(mu_T) %*% X + W %*% (Ctt^2 + 4*t(mu_T)%*%mu_T +2*Vt) %*% t(W)
+    SSt_expec = SSt_expec/(4*fit$estim$sigE^4)
+
+    SSt_star = tcrossprod(Cxt - W*c(Ctt))#Cxt%*%t(Cxt) - Cxt%*%Ctt%*%t(W) - W%*%Ctt%*%t(Cxt) + W%*%Ctt^2%*%t(W)
+    SSt_star = SSt_star/(4*fit$estim$sigE^4)
+
+    Iobs = B_star - SSt_expec + SSt_star
+    list(B_exp = B_star, SSt_exp = SSt_expec, SSt_star = SSt_star)
+  })
+  outp$seLoad = sapply(1:a, function(i) with(outp[[i]], sqrt(-diag(solve(B_exp - SSt_exp + SSt_star)))))
+  outp
+  #aparte matrices
+}
+
