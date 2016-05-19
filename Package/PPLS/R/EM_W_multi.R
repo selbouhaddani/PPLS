@@ -749,11 +749,12 @@ Maximiz_M <- function(fit,X,Y, type = "SVD"){
 #' @param a Positive integer, number of components
 #' @param EMsteps Positive integer, number of EM steps
 #' @param atol positive double, convergence criterium
+#' @param ... debug, logical. Should the slow Expect_M be used?
 #'
 #' @return list of class PPLS_simul with expectations, loglikelihoods and estimates.
 #'
 #' @export
-PPLS_simult <- function(X, Y, a, EMsteps = 10, atol = 1e-4, type = "SVD"){
+PPLS_simult <- function(X, Y, a, EMsteps = 10, atol = 1e-4, type = "SVD", ...){
   p = ncol(X)
   q = ncol(Y)
   W. = orth(matrix(rnorm(p*a),p)) #svd(X,nu=0,nv=a)$v
@@ -765,7 +766,7 @@ PPLS_simult <- function(X, Y, a, EMsteps = 10, atol = 1e-4, type = "SVD"){
   sigT. = diag(1,a)
   logl_incr = 1:EMsteps*NA
   for(i in 1:EMsteps){
-    Expect_M(X,Y,W.,C.,B.,sigE.,sigF.,sigH.,sigT.) %>% Maximiz_M(X,Y) -> outp
+    Expect_M(X,Y,W.,C.,B.,sigE.,sigF.,sigH.,sigT.,...) %>% Maximiz_M(X,Y) -> outp
     W. = outp$W
     C. = outp$C
     B. = outp$B
