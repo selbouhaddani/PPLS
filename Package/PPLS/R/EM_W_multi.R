@@ -640,79 +640,77 @@ Expect_M <- function(X,Y,W,C,B,sigE,sigF,sigH,sigT,debug=F){
   a = ncol(W)
 
   if(debug){
-  covT = rbind(W%*%sigT^2, C%*%B%*%sigT^2)
-  covU = rbind(W%*%B%*%sigT^2, C%*%B^2%*%sigT^2+sigH^2*C)
+    covT = rbind(W%*%sigT^2, C%*%B%*%sigT^2)
+    covU = rbind(W%*%B%*%sigT^2, C%*%B^2%*%sigT^2+sigH^2*C)
   invS= solve(sseXY_W(W,C,B,sigE,sigF,sigH,sigT))
 
-  mu_T = cbind(X,Y) %*% invS %*% covT
-  mu_U = cbind(X,Y) %*% invS %*% covU
+    mu_T = cbind(X,Y) %*% invS %*% covT
+    mu_U = cbind(X,Y) %*% invS %*% covU
 
-  sigU = sqrt(sigT^2%*%B^2 + diag(sigH^2,ncol(C)))
-  Ctt = sigT^2 - t(covT) %*% invS %*% covT + crossprod(mu_T) / N
-  Cuu = sigU^2 - t(covU) %*% invS %*% covU + crossprod(mu_U) / N
-  Cut = sigT^2 %*% B - t(covU) %*% invS %*% covT + crossprod(mu_U,mu_T) / N
+    sigU = sqrt(sigT^2%*%B^2 + diag(sigH^2,ncol(C)))
+    Ctt = sigT^2 - t(covT) %*% invS %*% covT + crossprod(mu_T) / N
+    Cuu = sigU^2 - t(covU) %*% invS %*% covU + crossprod(mu_U) / N
+    Cut = sigT^2 %*% B - t(covU) %*% invS %*% covT + crossprod(mu_U,mu_T) / N
 
-  covE = rbind(diag(sigE^2,p), diag(0,q,p))
-  mu_E = cbind(X,Y) %*% invS %*% covE
-  Cee = diag(sigE^2,p) - t(covE) %*% invS %*% covE + crossprod(mu_E) / N
+    covE = rbind(diag(sigE^2,p), diag(0,q,p))
+    mu_E = cbind(X,Y) %*% invS %*% covE
+    Cee = tr(diag(sigE^2,p) - t(covE) %*% invS %*% covE + crossprod(mu_E) / N)/p
 
-  covF = rbind(diag(0,p,q), diag(sigF^2,q))
-  mu_F = cbind(X,Y) %*% invS %*% covF
-  Cff = diag(sigF^2,q) - t(covF) %*% invS %*% covF + crossprod(mu_F) / N
+    covF = rbind(diag(0,p,q), diag(sigF^2,q))
+    mu_F = cbind(X,Y) %*% invS %*% covF
+    Cff = tr(diag(sigF^2,q) - t(covF) %*% invS %*% covF + crossprod(mu_F) / N)/q
 
-  covH = rbind(0*W, sigH^2*C)
-  mu_H = cbind(X,Y) %*% invS %*% covH
-  Chh = diag(sigH^2,ncol(C)) - t(covH) %*% invS %*% covH + crossprod(mu_H) / N
+    covH = rbind(0*W, sigH^2*C)
+    mu_H = cbind(X,Y) %*% invS %*% covH
+    Chh = diag(sigH^2,ncol(C)) - t(covH) %*% invS %*% covH + crossprod(mu_H) / N
 
-  return(list(mu_T = mu_T, mu_U = mu_U, Ctt = Ctt, Cuu = Cuu,
-                        Cut = Cut, Cee = Cee, Cff = Cff, Chh = Chh))
+  } else {
+    ##############
+    sigT = diag(sigT)
+    B = diag(B)
+    g = sapply(1:a, function(i) sigT[i]^2*B[i]^2 + sigH^2)
+    Kw = sapply(1:a, function(i) sigT[i]^2 - sigT[i]^4*B[i]^2/sigF^2 + sigT[i]^4*B[i]^2*g[i]/(sigF^2*(g[i]+sigF^2)))
+    Kc = sapply(1:a, function(i) g[i] - sigT[i]^4*B[i]^2/sigE^2 + sigT[i]^6*B[i]^2/(sigE^2*(sigT[i]^2+sigE^2)))
+    Kwc = sapply(1:a, function(i) sigT[i]^2*B[i]/(sigE^2*sigF^2) - Kc[i]*sigT[i]^2*B[i]/(sigE^2*sigF^2*(Kc[i]+sigF^2)) -
+              sigT[i]^4*B[i]/(sigE^2*sigF^2*(sigT[i]^2+sigE^2)) +
+              Kc[i]*sigT[i]^4*B[i]/(sigE^2*sigF^2*(Kc[i]+sigF^2)*(sigT[i]^2+sigE^2)))
+    c1 = sapply(1:a, function(i) Kw[i] / (sigE^2*(Kw[i] + sigE^2)))
+    c3 = sapply(1:a, function(i) Kc[i] / (sigF^2*(Kc[i] + sigF^2)))
+    c2 = Kwc
+    if(global_debug) return(c(c1, c2, c3))
+    sigT = diag(sigT, a)
+    B = diag(B, a)
+    c1 = diag(c1, a)
+    c2 = diag(c2, a)
+    c3 = diag(c3, a)
+
+    varU = sigT^2%*%B^2 + diag(sigH^2,a)
+    Xw = X%*%W
+    Yc = Y%*%C
+    mu_T = sigE^-2 * Xw%*%sigT^2 + sigF^-2 * Yc%*%sigT^2%*%B - Xw%*%c1%*%sigT^2 -
+      Xw%*%c2%*%sigT^2%*%B - Yc%*%c2%*%sigT^2 - Yc%*%c3%*%B%*%sigT^2
+    mu_U = sigE^-2 * Xw%*%sigT^2%*%B + sigF^-2 * Yc%*%varU -
+      Xw%*%c1%*%sigT^2%*%B - Xw%*%c2%*%varU - Yc%*%c2%*%sigT^2%*%B - Yc%*%c3%*%varU
+
+    Ctt = sigT^2 - sigE^-2*sigT^4 - sigF^-2*sigT^4%*%B^2 + sigT^4%*%c1 + 2*sigT^4%*%B%*%c2 +
+      sigT^4%*%B^2%*%c3 + crossprod(mu_T) / N
+    Cuu = varU - sigE^-2*sigT^4%*%B^2 - sigF^-2*varU^2 + sigT^4%*%B^2%*%c1 +
+      2*sigT^2%*%B%*%varU%*%c2 + varU^2%*%c3 + crossprod(mu_U) / N
+    Cut = sigT^2 %*% B - sigE^-2*sigT^4%*%B - sigF^-2*sigT^2%*%B%*%varU + sigT^4%*%B%*%c1 +
+      sigT^2%*%varU%*%c2 + sigT^4%*%B^2%*%c2 + sigT^2%*%B%*%varU%*%c3 + crossprod(mu_U,mu_T) / N
+
+    mu_E = X - sigE^2*Xw%*%c1%*%t(W) - sigE^2*Yc%*%c2%*%t(W)
+    Cee = (p*sigE^2 - p*sigE^2 + sigE^4*sum(c1) + ssq(mu_E) / N) / p
+
+    mu_F = Y - sigF^2*Yc%*%c3%*%t(C) - sigF^2*Xw%*%c2%*%t(C)
+    Cff = (q*sigF^2 - q*sigF^2 + sigF^4*sum(c3) + ssq(mu_F) / N) / q
+
+    mu_H = sigF^-2*sigH^2*Yc - sigH^2*(Xw%*%c2 + Yc%*%c3)
+    Chh = diag(sigH^2 - sigH^4/sigF^2,a) + sigH^4*c3 + crossprod(mu_H) / N
+    ##############
   }
-
-  ##############
-  sigT = diag(sigT)
-  B = diag(B)
-  g = sapply(1:a, function(i) sigT[i]^2*B[i]^2 + sigH^2)
-  Kw = sapply(1:a, function(i) sigT[i]^2 - sigT[i]^4*B[i]^2/sigF^2 + sigT[i]^4*B[i]^2*g[i]/(sigF^2*(g[i]+sigF^2)))
-  Kc = sapply(1:a, function(i) g[i] - sigT[i]^4*B[i]^2/sigE^2 + sigT[i]^6*B[i]^2/(sigE^2*(sigT[i]^2+sigE^2)))
-  Kwc = sapply(1:a, function(i) sigT[i]^2*B[i]/(sigE^2*sigF^2) - Kc[i]*sigT[i]^2*B[i]/(sigE^2*sigF^2*(Kc[i]+sigF^2)) -
-            sigT[i]^4*B[i]/(sigE^2*sigF^2*(sigT[i]^2+sigE^2)) +
-            Kc[i]*sigT[i]^4*B[i]/(sigE^2*sigF^2*(Kc[i]+sigF^2)*(sigT[i]^2+sigE^2)))
-  c1 = sapply(1:a, function(i) Kw[i] / (sigE^2*(Kw[i] + sigE^2)))
-  c3 = sapply(1:a, function(i) Kc[i] / (sigF^2*(Kc[i] + sigF^2)))
-  c2 = Kwc
-  sigT = diag(sigT, a)
-  B = diag(B, a)
-  c1 = diag(c1, a)
-  c2 = diag(c2, a)
-  c3 = diag(c3, a)
-
-  varU = sigT^2%*%B^2 + diag(sigH^2,a)
-  Xw = X%*%W
-  Yc = Y%*%C
-  mu_T = sigE^-2 * Xw%*%sigT^2 + sigF^-2 * Yc%*%sigT^2%*%B - Xw%*%c1%*%sigT^2 -
-    Xw%*%c2%*%sigT^2%*%B - Yc%*%c2%*%sigT^2 - Yc%*%c3%*%B%*%sigT^2
-  mu_U = sigE^-2 * Xw%*%sigT^2%*%B + sigF^-2 * Yc%*%varU -
-    Xw%*%c1%*%sigT^2%*%B - Xw%*%c2%*%varU - Yc%*%c2%*%sigT^2%*%B - Yc%*%c3%*%varU
-
-  Ctt = sigT^2 - sigE^-2*sigT^4 - sigF^-2*sigT^4%*%B^2 + sigT^4%*%c1 + 2*sigT^4%*%B%*%c2 +
-    sigT^4%*%B^2%*%c3 + crossprod(mu_T) / N
-  Cuu = varU - sigE^-2*sigT^4%*%B^2 - sigF^-2*varU^2 + sigT^4%*%B^2%*%c1 +
-    2*sigT^2%*%B%*%varU%*%c2 + varU^2%*%c3 + crossprod(mu_U) / N
-  Cut = sigT^2 %*% B - sigE^-2*sigT^4%*%B - sigF^-2*sigT^2%*%B%*%varU + sigT^4%*%B%*%c1 +
-    sigT^2%*%varU%*%c2 + sigT^4%*%B^2%*%c2 + sigT^2%*%B%*%varU%*%c3 + crossprod(mu_U,mu_T) / N
-
-  mu_E = X - sigE^2*Xw%*%c1%*%t(W) - sigE^2*Yc%*%c2%*%t(W)
-  Cee = p*sigE^2 - p*sigE^2 + sigE^4*sum(c1) + ssq(mu_E) / N
-
-  mu_F = Y - sigF^2*Yc%*%c3%*%t(C) - sigF^2*Xw%*%c2%*%t(C)
-  Cff = q*sigF^2 - q*sigF^2 + sigF^4*sum(c3) + ssq(mu_F) / N
-
-  mu_H = sigF^-2*sigH^2*Yc - sigH^2*(Xw%*%c2 + Yc%*%c3)
-  Chh = diag(sigH^2 - sigH^4/sigF^2,a) + sigH^4*c3 + crossprod(mu_H) / N
-  ##############
-
-  list(mu_T = mu_T, mu_U = mu_U, Ctt = Ctt, Cuu = Cuu,
-       Cut = Cut, Cee = as.matrix(Cee)/p, Cff = as.matrix(Cff)/p, Chh = Chh)
+  list(mu_T = mu_T, mu_U = mu_U, Ctt = Ctt*diag(1,nrow(Cut)), Cuu = Cuu*diag(1,nrow(Cut)),
+       Cut = Cut*diag(1,nrow(Cut)), Cee = as.matrix(Cee), Cff = as.matrix(Cff), Chh = Chh)
 }
 
 #' The M step
