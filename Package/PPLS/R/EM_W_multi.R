@@ -677,7 +677,7 @@ Expect_M <- function(X,Y,W,C,B,sigE,sigF,sigH,sigT,debug=F){
     c1 = sapply(1:a, function(i) Kw[i] / (sigE^2*(Kw[i] + sigE^2)))
     c3 = sapply(1:a, function(i) Kc[i] / (sigF^2*(Kc[i] + sigF^2)))
     c2 = Kwc
-    if(global_debug) return(c(c1, c2, c3))
+#    if(global_debug) return(c(c1, c2, c3))
     sigT = diag(sigT, a)
     B = diag(B, a)
     c1 = diag(c1, a)
@@ -709,7 +709,7 @@ Expect_M <- function(X,Y,W,C,B,sigE,sigF,sigH,sigT,debug=F){
     Chh = diag(sigH^2 - sigH^4/sigF^2,a) + sigH^4*c3 + crossprod(mu_H) / N
     ##############
   }
-  list(mu_T = mu_T, mu_U = mu_U, Ctt = Ctt*diag(1,nrow(Cut)), Cuu = Cuu*diag(1,nrow(Cut)),
+  list(mu_T = mu_T, mu_U = mu_U, Ctt = abs(Ctt)*diag(1,nrow(Ctt)), Cuu = abs(Cuu)*diag(1,nrow(Cuu)),
        Cut = Cut*diag(1,nrow(Cut)), Cee = as.matrix(Cee), Cff = as.matrix(Cff), Chh = Chh)
 }
 
@@ -755,13 +755,14 @@ Maximiz_M <- function(fit,X,Y, type = "SVD"){
 PPLS_simult <- function(X, Y, a, EMsteps = 10, atol = 1e-4, type = "SVD", ...){
   p = ncol(X)
   q = ncol(Y)
-  W. = orth(matrix(rnorm(p*a),p)) #svd(X,nu=0,nv=a)$v
-  C. = orth(matrix(rnorm(q*a),q)) #svd(Y,nu=0,nv=a)$v
-  B. = diag(sort(abs(rnorm(a,0, .5)),T),a)
-  sigE. = 1/p
-  sigF. = 1/q
-  sigH. = 0.1/a
-  sigT. = diag(1,a)
+  f0 = suppressWarnings(PPLS(X, Y, a, min(20,EMsteps), atol))
+  W. = f0$W # orth(matrix(rnorm(p*a),p)) #svd(X,nu=0,nv=a)$v
+  C. = f0$C  # orth(matrix(rnorm(q*a),q)) #svd(Y,nu=0,nv=a)$v
+  B. = diag(f0$B,a) # diag(sort(abs(rnorm(a,0, .5)),T),a)
+  sigE. = f0$sig[a,1] # 1/p
+  sigF. = f0$sig[a,2] # 1/q
+  sigH. = f0$sig[a,3] # 0.1/a
+  sigT. = diag(f0$sig[,4],a) # diag(1,a)
   logl_incr = 1:EMsteps*NA
   for(i in 1:EMsteps){
     Expect_M(X,Y,W.,C.,B.,sigE.,sigF.,sigH.,sigT.,...) %>% Maximiz_M(X,Y) -> outp
