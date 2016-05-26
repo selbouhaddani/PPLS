@@ -700,6 +700,8 @@ Expect_M <- function(X,Y,W,C,B,sigE,sigF,sigH,sigT,debug=F){
       sigT^2%*%varU%*%c2 + sigT^4%*%B^2%*%c2 + sigT^2%*%B%*%varU%*%c3 + crossprod(mu_U,mu_T) / N
 
     mu_E = X - sigE^2*Xw%*%c1%*%t(W) - sigE^2*Yc%*%c2%*%t(W)
+ #   ssq_E = ssq(X) - 2*sigE^2*(tr(crossprod(Xw, Xw%*%c1)) - tr(crossprod(Xw, Yc%*%c2))) +
+ #     sigE^4*(2*tr(crossprod(Xw, Yc%*%c1%*%c2)) + ssq(Xw%*%c1) + ssq(Yc%*%c2))
     Cee = (p*sigE^2 - p*sigE^2 + sigE^4*sum(c1) + ssq(mu_E) / N) / p
 
     mu_F = Y - sigF^2*Yc%*%c3%*%t(C) - sigF^2*Xw%*%c2%*%t(C)
@@ -755,7 +757,13 @@ Maximiz_M <- function(fit,X,Y, type = "SVD"){
 PPLS_simult <- function(X, Y, a, EMsteps = 10, atol = 1e-4, type = "SVD", ...){
   p = ncol(X)
   q = ncol(Y)
-  f0 = suppressWarnings(PPLS(X, Y, a, min(20,EMsteps), atol))
+  f0 = try(suppressWarnings(PPLS(X, Y, a, min(20,EMsteps), atol, initialGuess = "random")),T)
+  f0 = ifelse(inherits(f0,"try-error"),
+              try(suppressWarnings(PPLS(X, Y, a, min(20,EMsteps), atol, initialGuess = "random")),T),
+              f0)
+  f0 = ifelse(inherits(f0,"try-error"),
+              suppressWarnings(PPLS(X, Y, a, min(20,EMsteps), atol, initialGuess = "random")),
+              f0)
   W. = f0$W # orth(matrix(rnorm(p*a),p)) #svd(X,nu=0,nv=a)$v
   C. = f0$C  # orth(matrix(rnorm(q*a),q)) #svd(Y,nu=0,nv=a)$v
   B. = diag(f0$B,a) # diag(sort(abs(rnorm(a,0, .5)),T),a)
