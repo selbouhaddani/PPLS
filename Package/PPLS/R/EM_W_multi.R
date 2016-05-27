@@ -757,13 +757,10 @@ Maximiz_M <- function(fit,X,Y, type = c("SVD","QR")){
 PPLS_simult <- function(X, Y, a, EMsteps = 10, atol = 1e-4, type = c("SVD","QR"), ...){
   p = ncol(X)
   q = ncol(Y)
-  f0 = try(suppressWarnings(PPLS(X, Y, a, min(20,EMsteps), atol)),T)
-  f0 = ifelse(inherits(f0,"try-error"),
-              try(suppressWarnings(PPLS(X, Y, a, min(20,EMsteps), atol, initialGuess = "random")),T),
-              f0)
-  f0 = ifelse(inherits(f0,"try-error"),
-              suppressWarnings(PPLS(X, Y, a, min(20,EMsteps), atol, initialGuess = "random")),
-              f0)
+  type = match.arg(type)
+  f0 = try(suppressWarnings(PPLS(X, Y, a, 20, 1e-4, 'random')),T)
+  if(inherits(f0,"try-error")) f0 = try(suppressWarnings(PPLS(X, Y, a, 20, 1e-4, "random")),T)
+  if(inherits(f0,"try-error")) f0 = try(suppressWarnings(PPLS(X, Y, a, 20, 1e-4, "random")),T)
   W. = f0$W # orth(matrix(rnorm(p*a),p)) #svd(X,nu=0,nv=a)$v
   C. = f0$C  # orth(matrix(rnorm(q*a),q)) #svd(Y,nu=0,nv=a)$v
   B. = diag(f0$B,a) # diag(sort(abs(rnorm(a,0, .5)),T),a)
