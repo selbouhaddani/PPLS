@@ -4,7 +4,8 @@
 \alias{PPLS_simult}
 \title{The PPLS fitting function}
 \usage{
-PPLS_simult(X, Y, a, EMsteps = 10, atol = 1e-04, type = "SVD", ...)
+PPLS_simult(X, Y, a, EMsteps = 10, atol = 1e-04, type = c("SVD", "QR"),
+  ...)
 }
 \arguments{
 \item{X}{First dataset.}
@@ -16,6 +17,8 @@ PPLS_simult(X, Y, a, EMsteps = 10, atol = 1e-04, type = "SVD", ...)
 \item{EMsteps}{Positive integer, number of EM steps}
 
 \item{atol}{positive double, convergence criterium}
+
+\item{type}{String. One of "SVD" or "QR"}
 
 \item{...}{debug, logical. Should the slow Expect_M be used?}
 }

@@ -4,7 +4,7 @@
 \alias{Maximiz_M}
 \title{The M step}
 \usage{
-Maximiz_M(fit, X, Y, type = "SVD")
+Maximiz_M(fit, X, Y, type = c("SVD", "QR"))
 }
 \arguments{
 \item{fit}{A list as produced by \code{\link{Expect_M}}}
@@ -12,6 +12,8 @@ Maximiz_M(fit, X, Y, type = "SVD")
 \item{X}{First dataset.}
 
 \item{Y}{Second dataset.}
+
+\item{type}{String. One of "SVD" or "QR"}
 }
 \value{
 A list with updated estimates W, C, B, sigE, sigF, sigH and sigT.

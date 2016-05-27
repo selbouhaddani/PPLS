@@ -721,11 +721,11 @@ Expect_M <- function(X,Y,W,C,B,sigE,sigF,sigH,sigT,debug=F){
 #'
 #' @inheritParams Expect_M
 #' @param fit A list as produced by \code{\link{Expect_M}}
-#'
+#' @param type String. One of "SVD" or "QR"
 #' @return A list with updated estimates W, C, B, sigE, sigF, sigH and sigT.
 #'
 #' @export
-Maximiz_M <- function(fit,X,Y, type = "SVD"){
+Maximiz_M <- function(fit,X,Y, type = c("SVD","QR")){
   outp = with(fit,{
     list(
       W = orth(t(X) %*% mu_T,type=type),
@@ -754,10 +754,10 @@ Maximiz_M <- function(fit,X,Y, type = "SVD"){
 #' @return list of class PPLS_simul with expectations, loglikelihoods and estimates.
 #'
 #' @export
-PPLS_simult <- function(X, Y, a, EMsteps = 10, atol = 1e-4, type = "SVD", ...){
+PPLS_simult <- function(X, Y, a, EMsteps = 10, atol = 1e-4, type = c("SVD","QR"), ...){
   p = ncol(X)
   q = ncol(Y)
-  f0 = try(suppressWarnings(PPLS(X, Y, a, min(20,EMsteps), atol, initialGuess = "random")),T)
+  f0 = try(suppressWarnings(PPLS(X, Y, a, min(20,EMsteps), atol)),T)
   f0 = ifelse(inherits(f0,"try-error"),
               try(suppressWarnings(PPLS(X, Y, a, min(20,EMsteps), atol, initialGuess = "random")),T),
               f0)
@@ -771,6 +771,14 @@ PPLS_simult <- function(X, Y, a, EMsteps = 10, atol = 1e-4, type = "SVD", ...){
   sigF. = f0$sig[a,2] # 1/q
   sigH. = f0$sig[a,3] # 0.1/a
   sigT. = diag(f0$sig[,4],a) # diag(1,a)
+
+  signLoad = sign(diag(sigT. %*% B.))
+  rotLoad = order(diag(sigT. %*% B. %*% diag(signLoad,a)), decreasing=TRUE)
+  W. = W.[,rotLoad] %*% diag(signLoad, a)
+  C. = C.[,rotLoad] %*% diag(signLoad, a)
+  B. = diag(diag(B. %*% diag(signLoad, a))[rotLoad],a)
+  sigT. = diag(diag(sigT.)[rotLoad],a)
+
   logl_incr = 1:EMsteps*NA
   for(i in 1:EMsteps){
     Expect_M(X,Y,W.,C.,B.,sigE.,sigF.,sigH.,sigT.,...) %>% Maximiz_M(X,Y) -> outp
