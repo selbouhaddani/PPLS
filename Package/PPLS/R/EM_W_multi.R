@@ -778,7 +778,7 @@ PPLS_simult <- function(X, Y, a, EMsteps = 10, atol = 1e-4, type = c("SVD","QR")
 
   logl_incr = 1:EMsteps*NA
   for(i in 1:EMsteps){
-    Expect_M(X,Y,W.,C.,B.,sigE.,sigF.,sigH.,sigT.,...) %>% Maximiz_M(X,Y) -> outp
+    Expect_M(X,Y,W.,C.,B.,sigE.,sigF.,sigH.,sigT.,...) %>% Maximiz_M(X,Y,type) -> outp
     W. = outp$W
     C. = outp$C
     B. = outp$B
