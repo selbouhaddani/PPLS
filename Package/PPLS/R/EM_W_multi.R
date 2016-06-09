@@ -712,7 +712,7 @@ Expect_M <- function(X,Y,W,C,B,sigE,sigF,sigH,sigT,debug=F){
     ##############
   }
   list(mu_T = mu_T, mu_U = mu_U, Ctt = abs(Ctt)*diag(1,nrow(Ctt)), Cuu = abs(Cuu)*diag(1,nrow(Cuu)),
-       Cut = Cut*diag(1,nrow(Cut)), Cee = as.matrix(Cee), Cff = as.matrix(Cff), Chh = Chh)
+       Cut = Cut*diag(1,nrow(Cut)), Cee = as.matrix(Cee), Cff = as.matrix(Cff), Chh = abs(Chh))
 }
 
 #' The M step
@@ -827,30 +827,33 @@ PPLS_simult <- function(X, Y, a, EMsteps = 10, atol = 1e-4, type = c("SVD","QR")
 #' @return SE's for the loadings of corresponding data (so W or C)
 #' @export
 variances.PPLS_simult <- function(fit, data, XorY = c("X", "Y")){
-  W = fit$estim[ifelse(XorY=="X", "W", "C")][[1]]
+  if(XorY=="X") W = orth(t(data) %*% fit$Exp$mu_T,type="SVD")
+  if(XorY=="Y") W = orth(t(data) %*% fit$Exp$mu_U,type="SVD")
   X = data
+  N = nrow(X)
   a = ncol(as.matrix(W))
   Ctt = fit$Expec[ifelse(XorY=="X", "Ctt", "Cuu")][[1]]
   mu_T = fit$Expec[ifelse(XorY=="X", "mu_T", "mu_U")][[1]]
   outp <- lapply(1:a, function(i) {
     W = as.matrix(W[,i])
-    Ctt = t(Ctt[i,i])
+    Ctt = N*t(Ctt[i,i])
     mu_T = mu_T[,i]
     Vt = Ctt - crossprod(mu_T)
     Cxt = t(X) %*% mu_T
-    B_star = c(Ctt)/(4*fit$estim$sigE^2) * (diag(1,ncol(X)) - tcrossprod(W))
+    B_star = c(Ctt)/(fit$estim$sigE^2) * (diag(1,ncol(X))) / nrow(X)
 
-    SSt_expec = t(X) %*% diag(c(Ctt),nrow(X)) %*% X - t(X) %*% mu_T %*% (Ctt + 2*Vt) %*% t(W) -
-      W %*% (Ctt + 2*Vt) %*% t(mu_T) %*% X + W %*% (Ctt^2 + 4*t(mu_T)%*%mu_T +2*Vt) %*% t(W)
-    SSt_expec = SSt_expec/(4*fit$estim$sigE^4)
+    SSt_expec = t(X) %*% diag(c(Ctt),nrow(X)) %*% X - Cxt %*% (Ctt + 2*Vt) %*% t(W) -
+      W %*% (Ctt + 2*Vt) %*% t(Cxt) + W %*% (Ctt^2 + 4*crossprod(mu_T)%*%Vt +2*t(Vt)%*%Vt) %*% t(W)
+    SSt_expec = SSt_expec/(fit$estim$sigE^4) / nrow(X)
 
     SSt_star = tcrossprod(Cxt - W*c(Ctt))#Cxt%*%t(Cxt) - Cxt%*%Ctt%*%t(W) - W%*%Ctt%*%t(Cxt) + W%*%Ctt^2%*%t(W)
-    SSt_star = SSt_star/(4*fit$estim$sigE^4)
+    SSt_star = SSt_star/(fit$estim$sigE^4)
 
-    Iobs = B_star - SSt_expec + SSt_star
+    #Iobs = B_star - SSt_expec + SSt_star
     list(B_exp = B_star, SSt_exp = SSt_expec, SSt_star = SSt_star)
   })
-  outp$seLoad = sapply(1:a, function(i) with(outp[[i]], sqrt(-diag(solve(B_exp - SSt_exp + SSt_star)))))
+  outp$varMatrix = lapply(1:a, function(i) with(outp[[i]], -solve(B_exp - SSt_exp)))
+  outp$seLoad = sapply(1:a, function(i) sqrt(diag(outp$varMat[[i]])))
   outp
   #aparte matrices
 }
