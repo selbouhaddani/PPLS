@@ -19,7 +19,7 @@
 #' @import Rcpp
 #' @import ggplot2
 #' @import RcppEigen
-#' @import O2PLS
+#' @import OmicsPLS
 #' @import magrittr
 #' @import fBasics
 #' @useDynLib PPLS
@@ -204,7 +204,7 @@ PPLSi <- function(X,Y,EMsteps=1e2,atol=1e-4,initialGuess=c("equal","o2m","random
 #'  }
 #' @details This function estimates loadings and variances for multiple orthogonal directions. The loadings are W and C.
 #' The X-scores can be retrieved via \code{X \%*\% fit$W} where fit is a PPLS fit, or with the function \code{\link{scores.PPLS}}.
-#' The o2m initial guess fits a PLS model using the function \code{O2PLS::o2m} and uses the result as starting values.
+#' The o2m initial guess fits a PLS model using the function \code{OmicsPLS::o2m} and uses the result as starting values.
 #' If for some reason the likelihood is not monotone, check your input data or (re)try with \code{initialGuess = 'random'}.
 #'
 #' Use \code{plot(fit)} to plot the first two loadings. Use \code{print(fit,perc=TRUE)} for variances in percentages.
@@ -215,8 +215,8 @@ PPLSi <- function(X,Y,EMsteps=1e2,atol=1e-4,initialGuess=c("equal","o2m","random
 #' PPLS(X = exX, Y = exY, nr_comp = 3, EMsteps = 1e4)
 #' PPLS(X = exX, Y = exY, nr_comp = 3, EMsteps = 1e4, initialGuess = "random")
 #'
-#' # devtools::install_github("selbouhaddani/O2PLS")
-#' if(require(O2PLS)){
+#' # devtools::install_github("selbouhaddani/OmicsPLS")
+#' if(require(OmicsPLS)){
 #'  exinitGuess = list(W = orth(1:10), C = orth(1:12), B = 0.1,
 #'                      sigE = 1,sigF = 1,sigH = 1,sigT = 0.1)
 #'  PPLS(X = exX, Y = exY, nr_comp = 1, EMsteps = 1e4,

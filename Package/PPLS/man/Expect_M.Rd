@@ -35,4 +35,3 @@ This may be useful to check assumptions of no correlation between the latent var
 Performs the E step
 Expectation step
 }
-

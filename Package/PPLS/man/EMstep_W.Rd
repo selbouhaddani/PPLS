@@ -41,4 +41,3 @@ Performs one EM step (use \link{PPLS} for fitting a PPLS model)
 This function passes its arguments to EMstepC (a C++ function, see \link{Rcpp}), which returns the expected sufficient statistics.
 The maximization is done afterwards in this function. This may become a full C++ function later.
 }
-

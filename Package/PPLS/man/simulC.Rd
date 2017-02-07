@@ -37,4 +37,3 @@ Dat. Matrix of size N times p+q. Rows are samples, columns are realisations of X
 \description{
 Simulate data from a PO2PLS model
 }
-

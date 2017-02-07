@@ -29,4 +29,3 @@ Plot function for class PPLS.
 \details{
 This function plots one or two loadings/scores.
 }
-

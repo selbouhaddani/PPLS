@@ -12,6 +12,7 @@ This package implements the Partial Least Squares method in a probabilistic fram
 
 Just do PPLS(Datamatrix_1,Datamatrix_2,nr_of_components) to have a quick and dirty fit, modify the default arguments if necessary.
 }
+
 \author{
 Said el Bouhaddani (\email{s.el_bouhaddani@lumc.nl}),
 Jeanine Houwing-Duistermaat (\email{J.J.Houwing@lumc.nl}),
@@ -22,4 +23,3 @@ Hae-Won Uh (\email{H.Uh@lumc.nl}).
 Maintainer: Said el Bouhaddani (\email{s.el_bouhaddani@lumc.nl}).
 }
 \keyword{Probabilistic-PLS}
-

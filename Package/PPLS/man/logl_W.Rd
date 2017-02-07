@@ -34,4 +34,3 @@ Calculates loglikelihood for PPLS model.
 \details{
 This function passes its arguments to LoglC_fast (a C++ function, see \link{Rcpp}).
 }
-

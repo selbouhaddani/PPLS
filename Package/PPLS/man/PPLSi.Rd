@@ -42,4 +42,3 @@ Performs PPLS fit in one direction. (use \link{PPLS} for fitting a PPLS model)
 \details{
 This function estimates loadings and variances for one direction.
 }
-

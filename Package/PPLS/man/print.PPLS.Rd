@@ -24,4 +24,3 @@ Print function for class PPLS.
 \details{
 This function shows the absolute/relative variances of each component.
 }
-

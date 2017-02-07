@@ -19,4 +19,3 @@ Defines an appropriate list with chosen constraints
 fconstraint(list(sigH=.1))
 fconstraint(list(B=3,sigE=.5))
 }
-

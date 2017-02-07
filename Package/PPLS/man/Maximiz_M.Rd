@@ -21,4 +21,3 @@ A list with updated estimates W, C, B, sigE, sigF, sigH and sigT.
 \description{
 Maximization step
 }
-

@@ -28,4 +28,3 @@ list of class PPLS_simul with expectations, loglikelihoods and estimates.
 \description{
 Simultaneous PPLS fitting function
 }
-

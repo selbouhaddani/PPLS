@@ -19,4 +19,3 @@ SE's for the loadings of corresponding data (so W or C)
 \description{
 Calculates asymptotic variances for PPLS loadings
 }
-

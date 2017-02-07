@@ -24,4 +24,3 @@ Get scores from PPLS fit.
 \details{
 If you want just the X or Y scores, subset the result i.e. \code{scores.PPLS(fit,X,Y)[1:nrow(X),]} or \code{scores.PPLS(fit,X,Y)[-(1:nrow(X)),]}.
 }
-
