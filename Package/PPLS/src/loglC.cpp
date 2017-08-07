@@ -333,7 +333,7 @@ double loglC_fast(Eigen::MatrixXd W,Eigen::MatrixXd C,Eigen::MatrixXd X, Eigen::
   MatrixXd YC = Y*C;
   double traceL = 1/sig2X * X.array().square().sum() + 1/sig2Y * Y.array().square().sum();
   for(int i=0;i<a;i++) traceL += -c1(i)*(XW.col(i)).squaredNorm() - 2*c2(i)*(XW.col(i)).dot(YC.col(i)) - c3(i)*(YC.col(i)).squaredNorm();
-  double Loglik = - 0.5*N*p*log(2*M_PI) - 0.5*N*Logdiag - 0.5 * traceL;
+  double Loglik = - 0.5*N*(p+q)*log(2*M_PI) - 0.5*N*Logdiag - 0.5 * traceL;
   return Loglik;
 }
 
