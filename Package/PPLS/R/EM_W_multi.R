@@ -22,6 +22,7 @@
 #' @import OmicsPLS
 #' @import magrittr
 #' @import fBasics
+#' @import parallel
 #' @useDynLib PPLS
 NULL
 

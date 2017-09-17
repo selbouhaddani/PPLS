@@ -1,7 +1,7 @@
 Package: PPLS
 Type: Package
 Title: Probabilistic Partial Least Squares
-Version: 0.0.5
+Version: 0.0.6
 Date: 2015-11-13
 Author: Said el Bouhaddani
 Maintainer: Said el Bouhaddani <s.el_bouhaddani@lumc.nl>
@@ -17,6 +17,7 @@ Imports:
     OmicsPLS,
     ggplot2,
     magrittr,
-    fBasics
+    fBasics,
+    parallel
 LinkingTo: Rcpp, RcppEigen
 RoxygenNote: 6.0.1
