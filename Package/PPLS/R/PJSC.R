@@ -1,9 +1,3 @@
-tr <- function(X){
-  if(!is.matrix(X)) X = as.matrix(X)
-  if(nrow(X) != ncol(X)) warning("X not symmetric")
-  sum(diag(X))
-}
-
 blockm<-function(A,B,C)
   #input: Matrices A,B,C
   #output: the block matrix
@@ -21,8 +15,6 @@ l_step = function(X, Y, W, C, Wo, Co, Phi1, Phi2, Psi1, Psi2) {
   C = as.matrix(C)
   Co = as.matrix(Co)
   r = ncol(W)
-  p = ncol(X)
-  q = ncol(Y)
 
   Sigma = blockm(
     W %*% (diag(1, r) + Phi1) %*% t(W) + Wo %*% t(Wo) + Psi1,
@@ -66,9 +58,7 @@ E_step <- function(X, Y, W, C, Wo, Co, Phi1, Phi2, Psi1, Psi2) {
   r = ncol(W)
   rx = ncol(Wo)
   ry = ncol(Co)
-  p = ncol(X)
-  q = ncol(Y)
-  XY = cbind(X, Y)
+
   Sigma = blockm(
     W %*% (diag(1, r) + Phi1) %*% t(W) + Wo %*% t(Wo) + Psi1,
     W %*% t(C),
@@ -81,8 +71,8 @@ E_step <- function(X, Y, W, C, Wo, Co, Phi1, Phi2, Psi1, Psi2) {
 
   ############ X part
   CovXT = rbind(W %*% (diag(1, r) + Phi1), C)
-  muT = (XY) %*% invSigma %*% CovXT
-  muTo = XY %*% invSigma %*% rbind(Wo, matrix(0, q, rx))
+  muT = (cbind(X, Y)) %*% invSigma %*% CovXT
+  muTo = cbind(X, Y) %*% invSigma %*% rbind(Wo, matrix(0, q, rx))
 
   Cxt = t(X) %*% muT / N
   Cxto = t(X) %*% muTo / N
@@ -95,8 +85,8 @@ E_step <- function(X, Y, W, C, Wo, Co, Phi1, Phi2, Psi1, Psi2) {
 
   ########### Y part
   CovYU = rbind(W, C %*% (diag(1, r) + Phi2))
-  muU = (XY) %*% invSigma %*% CovYU
-  muUo = XY %*% invSigma %*% rbind(matrix(0, p, ry), Co)
+  muU = (cbind(X, Y)) %*% invSigma %*% CovYU
+  muUo = cbind(X, Y) %*% invSigma %*% rbind(matrix(0, p, ry), Co)
 
   Cyu = t(Y) %*% muU / N
   Cyuo = t(Y) %*% muUo / N
@@ -112,10 +102,10 @@ E_step <- function(X, Y, W, C, Wo, Co, Phi1, Phi2, Psi1, Psi2) {
   Psi21 = rbind(matrix(0, p, q), Psi2)
   Phi12 = rbind(W %*% Phi1, matrix(0, q, r))
   Phi21 = rbind(matrix(0, p, r), C %*% Phi2)
-  Cee = Psi1 - t(Psi12) %*% invSigma %*% Psi12 + t(Psi12) %*% invSigma %*% crossprod(XY) %*% invSigma %*% Psi12 / N
-  Cff = Psi2 - t(Psi21) %*% invSigma %*% Psi21 + t(Psi21) %*% invSigma %*% crossprod(XY) %*% invSigma %*% Psi21 / N
-  Cetet = Phi1 - t(Phi12) %*% invSigma %*% Phi12 + t(Phi12) %*% invSigma %*% crossprod(XY) %*% invSigma %*% Phi12 / N
-  Ceueu = Phi2 - t(Phi21) %*% invSigma %*% Phi21 + t(Phi21) %*% invSigma %*% crossprod(XY) %*% invSigma %*% Phi21 / N
+  Cee = Psi1 - t(Psi12) %*% invSigma %*% Psi12 + t(Psi12) %*% invSigma %*% crossprod(cbind(X,Y)) %*% invSigma %*% Psi12 / N
+  Cff = Psi2 - t(Psi21) %*% invSigma %*% Psi21 + t(Psi21) %*% invSigma %*% crossprod(cbind(X,Y)) %*% invSigma %*% Psi21 / N
+  Cetet = Phi1 - t(Phi12) %*% invSigma %*% Phi12 + t(Phi12) %*% invSigma %*% crossprod(cbind(X,Y)) %*% invSigma %*% Phi12 / N
+  Ceueu = Phi2 - t(Phi21) %*% invSigma %*% Phi21 + t(Phi21) %*% invSigma %*% crossprod(cbind(X,Y)) %*% invSigma %*% Phi21 / N
 
   #if(any(diag(Cetet)<0)) {warning("1");Cetet = - t(W) %*% invS1 %*% W + 2 * t(W) %*% invS1 %*% crossprod(X) %*% invS1 %*% W / N}
   #if(any(diag(Ceueu)<0)) {warning("2");Ceueu = - t(C) %*% invS2 %*% C + 2 * t(C) %*% invS2 %*% crossprod(Y) %*% invS2 %*% C / N}
@@ -149,8 +139,8 @@ M_step <- function(efit) {
     list(
       X = X,
       Y = Y,
-      W = orth(Cxt %*% solve(Ctt))%*%diag(qr(Cxt)$qraux),
-      C = orth(Cyu %*% solve(Cuu))%*%diag(qr(Cyu)$qraux),
+      W = Cxt %*% solve(Ctt),
+      C = Cyu %*% solve(Cuu),
       Wo = Cxto %*% solve(Ctoto),
       Co = Cyuo %*% solve(Cuouo),
       Phi1 = Cetet,
@@ -190,7 +180,6 @@ PJSC <- function(X, Y, n, nx, ny, nr_steps, tol){
     l_old = l_new
     fit = do.call(E_step, init)
     init = M_step(fit)
-    print(crossprod(fit$Cxt %*% solve(fit$Ctt)))
     l_new = do.call(l_step, init)
     #dvals$W = c(dvals$W, cor(init$W[, 1], W[, 1]))
     dvals$l = c(dvals$l, l_old)
@@ -224,10 +213,10 @@ simulate_PJSC <- function(N, W, C, Wo, Co, Phi1, Phi2, Psi1, Psi2){
   q = ncol(C)
 
   Z = matrix(rnorm(N*r))
-  eps1 = mvrnorm(N*r, Sigma = Phi1, mu = rep(0,nrow(Phi1)))
-  eps2 = mvrnorm(N*r, Sigma = Phi2, mu = rep(0,nrow(Phi2)))
-  E = mvrnorm(N*p, Sigma = Psi1, mu = rep(0,nrow(Psi1)))
-  Ff = mvrnorm(N*q, Sigma = Psi2, mu = rep(0,nrow(Psi2)))
+  eps1 = mvrnorm(N*r, Sigma = Phi1)
+  eps2 = mvrnorm(N*r, Sigma = Phi2)
+  E = mvrnorm(N*p, Sigma = Psi1)
+  Ff = mvrnorm(N*p, Sigma = Psi2)
   To = matrix(rnorm(N*rx))
   Uo = matrix(rnorm(N*ry))
 
