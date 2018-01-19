@@ -3,6 +3,3 @@
 .RData
 *.dat
 test.tab
-src/*.o
-src/*.so
-src/*.dll

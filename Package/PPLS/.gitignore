@@ -1,0 +1,11 @@
+*.dll
+*.o
+src/*.o
+src/*.so
+src/*.dll
+src-386/*.o
+src-386/*.so
+src-386/*.dll
+src-x64/*.o
+src-x64/*.so
+src-x64/*.dll
