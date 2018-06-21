@@ -8,7 +8,7 @@ using namespace Rcpp;
 
 // loglC
 List loglC(Eigen::MatrixXd W, Eigen::MatrixXd C, Eigen::MatrixXd P_Yosc, Eigen::MatrixXd P_Xosc, Eigen::MatrixXd B_T, Eigen::MatrixXd Dat, double sigX, double sigY, double sigH, Eigen::MatrixXd sigT, Eigen::MatrixXd sigTo, Eigen::MatrixXd sigUo, double c1, double c2, double c3);
-RcppExport SEXP PPLS_loglC(SEXP WSEXP, SEXP CSEXP, SEXP P_YoscSEXP, SEXP P_XoscSEXP, SEXP B_TSEXP, SEXP DatSEXP, SEXP sigXSEXP, SEXP sigYSEXP, SEXP sigHSEXP, SEXP sigTSEXP, SEXP sigToSEXP, SEXP sigUoSEXP, SEXP c1SEXP, SEXP c2SEXP, SEXP c3SEXP) {
+RcppExport SEXP _PPLS_loglC(SEXP WSEXP, SEXP CSEXP, SEXP P_YoscSEXP, SEXP P_XoscSEXP, SEXP B_TSEXP, SEXP DatSEXP, SEXP sigXSEXP, SEXP sigYSEXP, SEXP sigHSEXP, SEXP sigTSEXP, SEXP sigToSEXP, SEXP sigUoSEXP, SEXP c1SEXP, SEXP c2SEXP, SEXP c3SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -33,7 +33,7 @@ END_RCPP
 }
 // EMstepC
 List EMstepC(Eigen::MatrixXd W, Eigen::MatrixXd C, Eigen::MatrixXd P_Yosc, Eigen::MatrixXd P_Xosc, Eigen::MatrixXd B_T, Eigen::MatrixXd Dat, double sigX, double sigY, double sigH, Eigen::MatrixXd sigT, Eigen::MatrixXd sigTo, Eigen::MatrixXd sigUo, Eigen::MatrixXd invS);
-RcppExport SEXP PPLS_EMstepC(SEXP WSEXP, SEXP CSEXP, SEXP P_YoscSEXP, SEXP P_XoscSEXP, SEXP B_TSEXP, SEXP DatSEXP, SEXP sigXSEXP, SEXP sigYSEXP, SEXP sigHSEXP, SEXP sigTSEXP, SEXP sigToSEXP, SEXP sigUoSEXP, SEXP invSSEXP) {
+RcppExport SEXP _PPLS_EMstepC(SEXP WSEXP, SEXP CSEXP, SEXP P_YoscSEXP, SEXP P_XoscSEXP, SEXP B_TSEXP, SEXP DatSEXP, SEXP sigXSEXP, SEXP sigYSEXP, SEXP sigHSEXP, SEXP sigTSEXP, SEXP sigToSEXP, SEXP sigUoSEXP, SEXP invSSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -56,7 +56,7 @@ END_RCPP
 }
 // simulC
 Eigen::MatrixXd simulC(int N, Eigen::MatrixXd W, Eigen::MatrixXd C, Eigen::MatrixXd P_Yosc, Eigen::MatrixXd P_Xosc, Eigen::MatrixXd B_T, double sigX, double sigY, double sigH, Eigen::MatrixXd sigT, Eigen::MatrixXd sigTo, Eigen::MatrixXd sigUo);
-RcppExport SEXP PPLS_simulC(SEXP NSEXP, SEXP WSEXP, SEXP CSEXP, SEXP P_YoscSEXP, SEXP P_XoscSEXP, SEXP B_TSEXP, SEXP sigXSEXP, SEXP sigYSEXP, SEXP sigHSEXP, SEXP sigTSEXP, SEXP sigToSEXP, SEXP sigUoSEXP) {
+RcppExport SEXP _PPLS_simulC(SEXP NSEXP, SEXP WSEXP, SEXP CSEXP, SEXP P_YoscSEXP, SEXP P_XoscSEXP, SEXP B_TSEXP, SEXP sigXSEXP, SEXP sigYSEXP, SEXP sigHSEXP, SEXP sigTSEXP, SEXP sigToSEXP, SEXP sigUoSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -78,7 +78,7 @@ END_RCPP
 }
 // loglC_fast
 double loglC_fast(Eigen::MatrixXd W, Eigen::MatrixXd C, Eigen::MatrixXd X, Eigen::MatrixXd Y, double sigX, double sigY, Eigen::VectorXd sig2T, Eigen::VectorXd c1, Eigen::VectorXd c2, Eigen::VectorXd c3, Eigen::VectorXd Kc);
-RcppExport SEXP PPLS_loglC_fast(SEXP WSEXP, SEXP CSEXP, SEXP XSEXP, SEXP YSEXP, SEXP sigXSEXP, SEXP sigYSEXP, SEXP sig2TSEXP, SEXP c1SEXP, SEXP c2SEXP, SEXP c3SEXP, SEXP KcSEXP) {
+RcppExport SEXP _PPLS_loglC_fast(SEXP WSEXP, SEXP CSEXP, SEXP XSEXP, SEXP YSEXP, SEXP sigXSEXP, SEXP sigYSEXP, SEXP sig2TSEXP, SEXP c1SEXP, SEXP c2SEXP, SEXP c3SEXP, SEXP KcSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -99,7 +99,7 @@ END_RCPP
 }
 // EMstepC_fast
 List EMstepC_fast(Eigen::VectorXd W, Eigen::VectorXd C, double B, Eigen::MatrixXd X, Eigen::MatrixXd Y, double sigX, double sigY, double sigH, double sigT, double c1, double c2, double c3);
-RcppExport SEXP PPLS_EMstepC_fast(SEXP WSEXP, SEXP CSEXP, SEXP BSEXP, SEXP XSEXP, SEXP YSEXP, SEXP sigXSEXP, SEXP sigYSEXP, SEXP sigHSEXP, SEXP sigTSEXP, SEXP c1SEXP, SEXP c2SEXP, SEXP c3SEXP) {
+RcppExport SEXP _PPLS_EMstepC_fast(SEXP WSEXP, SEXP CSEXP, SEXP BSEXP, SEXP XSEXP, SEXP YSEXP, SEXP sigXSEXP, SEXP sigYSEXP, SEXP sigHSEXP, SEXP sigTSEXP, SEXP c1SEXP, SEXP c2SEXP, SEXP c3SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -121,7 +121,7 @@ END_RCPP
 }
 // meta_Estep
 List meta_Estep(Eigen::VectorXd W, Eigen::VectorXd C, double B, Eigen::MatrixXd X, Eigen::MatrixXd Y, double sigX, double sigY, double sigH, double sigT, double c1, double c2, double c3);
-RcppExport SEXP PPLS_meta_Estep(SEXP WSEXP, SEXP CSEXP, SEXP BSEXP, SEXP XSEXP, SEXP YSEXP, SEXP sigXSEXP, SEXP sigYSEXP, SEXP sigHSEXP, SEXP sigTSEXP, SEXP c1SEXP, SEXP c2SEXP, SEXP c3SEXP) {
+RcppExport SEXP _PPLS_meta_Estep(SEXP WSEXP, SEXP CSEXP, SEXP BSEXP, SEXP XSEXP, SEXP YSEXP, SEXP sigXSEXP, SEXP sigYSEXP, SEXP sigHSEXP, SEXP sigTSEXP, SEXP c1SEXP, SEXP c2SEXP, SEXP c3SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -143,7 +143,7 @@ END_RCPP
 }
 // meta_Mstep
 List meta_Mstep(List ret);
-RcppExport SEXP PPLS_meta_Mstep(SEXP retSEXP) {
+RcppExport SEXP _PPLS_meta_Mstep(SEXP retSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -151,4 +151,20 @@ BEGIN_RCPP
     rcpp_result_gen = Rcpp::wrap(meta_Mstep(ret));
     return rcpp_result_gen;
 END_RCPP
+}
+
+static const R_CallMethodDef CallEntries[] = {
+    {"_PPLS_loglC", (DL_FUNC) &_PPLS_loglC, 15},
+    {"_PPLS_EMstepC", (DL_FUNC) &_PPLS_EMstepC, 13},
+    {"_PPLS_simulC", (DL_FUNC) &_PPLS_simulC, 12},
+    {"_PPLS_loglC_fast", (DL_FUNC) &_PPLS_loglC_fast, 11},
+    {"_PPLS_EMstepC_fast", (DL_FUNC) &_PPLS_EMstepC_fast, 12},
+    {"_PPLS_meta_Estep", (DL_FUNC) &_PPLS_meta_Estep, 12},
+    {"_PPLS_meta_Mstep", (DL_FUNC) &_PPLS_meta_Mstep, 1},
+    {NULL, NULL, 0}
+};
+
+RcppExport void R_init_PPLS(DllInfo *dll) {
+    R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
+    R_useDynamicSymbols(dll, FALSE);
 }

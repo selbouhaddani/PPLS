@@ -859,3 +859,199 @@ variances.PPLS_simult <- function(fit, data, XorY = c("X", "Y")){
   #aparte matrices
 }
 
+#' @export
+soft_thres <- function(JPCs, lambda){
+  stopifnot(lambda>=0, lambda<=1)
+
+  JPCs <- apply(JPCs, 2, function(e){
+    sign(e)*pmax(abs(e) - lambda, 0)
+  })
+  JPCs
+}
+
+#' @export
+center <- function(X){
+  scale(as.matrix(X),scale=FALSE, center=TRUE)
+}
+
+#' @export
+crossval_lasso <- function(X, y, r, grid_lambda, nr_folds = 10, nr_cores = 1, ...){
+  tic = proc.time()
+  X <- as.matrix(X)
+  stopifnot(ncol(X) > r, nrow(X) >= nr_folds)
+  stopifnot(nr_cores == abs(round(nr_cores)))
+  if (nr_folds == 1) {
+    stop("Cross-validation with 1 fold does not make sense, use 2 folds or more")
+  }
+  folds <- sample(nrow(X))
+  blocks <- cut(seq(1:nrow(X)), breaks = nr_folds, labels = F)
+  parms = data.frame(fold.i = 1:nr_folds)
+  parms = merge(parms, data.frame(lambda = grid_lambda))
+
+  parms = apply(parms, 1, as.list)
+  outp = parallelsugar::mclapply(mc.cores = nr_cores, parms, function(e, ...) {
+    ii <- folds[which(blocks == e$fold.i)]
+    fit = suppressWarnings(PPLS(X[-ii,], Y[-ii,], r, ...))
+    fit$W <- orth(soft_thres(fit$W, c(e$lambda)))
+    fit$C <- orth(soft_thres(fit$C, c(e$lambda)))
+    return(ssq(center(Y[ii,]) - center(X[ii,] %*% fit$W %*% diag(fit$B,r) %*% t(fit$C)))/nrow(X))
+  })
+  outp <- (matrix(unlist(outp),nr_folds))
+  colnames(outp) <- paste0("lambda=",round(grid_lambda,3))
+  outp2 <- colMeans(outp)
+  message("Best lambda is ", grid_lambda[which.min(outp2)])
+  toc = proc.time() - tic
+  list(errors = outp, time = round(toc[3], 2))
+}
+
+
+PPLS1 <- function(X, y, r, nr_steps = 1e3, toler = 1e-5){
+  p = ncol(X)
+  q = ncol(Y)
+  type = match.arg(type)
+  f0 = try(suppressWarnings(PPLS(X, Y, a, 20, 1e-4, 'random')),T)
+  if(inherits(f0,"try-error")) f0 = try(suppressWarnings(PPLS(X, Y, a, 20, 1e-4, "random")),T)
+  if(inherits(f0,"try-error")) f0 = try(suppressWarnings(PPLS(X, Y, a, 20, 1e-4, "random")),T)
+  W. = f0$W # orth(matrix(rnorm(p*a),p)) #svd(X,nu=0,nv=a)$v
+  C. = f0$C  # orth(matrix(rnorm(q*a),q)) #svd(Y,nu=0,nv=a)$v
+  B. = diag(f0$B,a) # diag(sort(abs(rnorm(a,0, .5)),T),a)
+  sigE. = f0$sig[a,1] # 1/p
+  sigF. = f0$sig[a,2] # 1/q
+  sigH. = f0$sig[a,3] # 0.1/a
+  sigT. = diag(f0$sig[,4],a) # diag(1,a)
+
+  signLoad = sign(diag(sigT. %*% B.))
+  rotLoad = order(diag(sigT. %*% B. %*% diag(signLoad,a)), decreasing=TRUE)
+  W. = W.[,rotLoad] %*% diag(signLoad, a)
+  C. = C.[,rotLoad] %*% diag(signLoad, a)
+  B. = diag(diag(B. %*% diag(signLoad, a))[rotLoad],a)
+  sigT. = diag(diag(sigT.)[rotLoad],a)
+
+  logl_incr = 1:EMsteps*NA
+  for(i in 1:EMsteps){
+    Expect_M(X,Y,W.,C.,B.,sigE.,sigF.,sigH.,sigT.,...) %>% Maximiz_M(X,Y,type) -> outp
+    W. = outp$W
+    C. = outp$C
+    B. = outp$B
+    sigE. = outp$sigE
+    sigF. = outp$sigF
+    sigH. = outp$sigH
+    sigT. = outp$sigT
+
+    logl_incr[i] = logl_W(X,Y,W.,C.,B.,sigE.,sigF.,sigH.,sigT.)
+    if(i > 1 && diff(logl_incr)[i-1] < atol){ break}
+  }
+  signLoad = sign(diag(sigT. %*% B.))
+  rotLoad = order(diag(sigT. %*% B. %*% diag(signLoad,a)), decreasing=TRUE)
+  outp$W = W.[,rotLoad] %*% diag(signLoad, a)
+  outp$C = C.[,rotLoad] %*% diag(signLoad, a)
+  outp$B = diag(diag(B. %*% diag(signLoad, a))[rotLoad],a)
+  outp$sigT = diag(diag(sigT.)[rotLoad],a)
+  logl_incr = logl_incr[1:i]
+  if(any(diff(logl_incr) < 0)) warning("Negative increments of likelihood")
+  Eout = Expect_M(X,Y,W.,C.,B.,sigE.,sigF.,sigH.,sigT.)
+  outpt = list(Expectations = Eout, loglik = logl_incr, estimates = outp)
+
+  class(outpt) <- "PPLS_simult"
+  outpt
+
+}
+
+Lemma.ppls1 <- function(X, SigmaZ, invZtilde, Gamma, sig2E, sig2F, p, q, r){
+  GammaEF <- Gamma
+  GammaEF[1:p,c(1:r)] <- 1/sig2E*GammaEF[1:p,c(1:r)]
+  GammaEF[-(1:p),c(r)] <- 1/sig2F* GammaEF[-(1:p),c(r)]
+
+  GGef <- t(Gamma) %*% GammaEF
+  VarZc <- SigmaZ - (t(Gamma %*% SigmaZ) %*% GammaEF) %*% SigmaZ +
+    (t(Gamma %*% SigmaZ) %*% GammaEF) %*% invZtilde %*% GGef %*% SigmaZ
+
+  EZc <- X %*% (GammaEF %*% SigmaZ)
+  EZc <- EZc - X %*% ((GammaEF %*% invZtilde)  %*% (GGef %*% SigmaZ))
+  return(list(EZc = EZc, VarZc = VarZc))
+}
+
+E_step.ppls1 <- function(X, y, W, C, beta, SigT, sig2E, sig2eps){
+
+  ## define dimensions
+  N = nrow(X)
+  p = nrow(W)
+  r = ncol(W)
+
+  ## concatenate data
+  dataXY <- cbind(X,y)
+
+  ## Gamma is the generalized loading matrix, with PO2PLS structure
+  Gamma = rbind(W,t(beta) %*% W)
+  ## Gamma multiplied by inverse SigmaEF
+  GammaEF <- Gamma
+  GammaEF[1:p,c(1:r)] <- 1/sig2E*GammaEF[1:p,c(1:r)]
+  GammaEF[-(1:p),c(r)] <- 1/sig2eps* GammaEF[-(1:p),c(r)]
+  GGef <- t(Gamma) %*% GammaEF
+
+  ## ALMOST diagonal cov matrix of (T,U,To,Uo)
+  SigmaZ = SigT
+
+  ## inverse middle term lemma
+  invZtilde <- MASS::ginv(MASS::ginv(SigmaZ) + GGef)
+
+  ## Calculate conditional expectations with efficient lemma
+  tmp <- Lemma.ppls1(dataXY, SigmaZ, invZtilde, Gamma, sig2E, sig2eps,p,1,r)
+
+  ## Define Szz as expected crossprod of Z
+  VarZc = tmp$VarZc
+  EZc = tmp$EZc
+  Szz = VarZc + crossprod(EZc)/N
+
+
+  ## Calculate cond mean of E,F
+  mu_EF = dataXY
+  mu_EF <- mu_EF - (dataXY %*% (GammaEF %*% invZtilde)) %*% t(Gamma)
+
+  ## Take trace of the matrix
+  Cee <- sum(diag(
+    crossprod(rbind(W,t(beta) %*% W))%*%invZtilde
+  ))/p + ssq(mu_EF[,1:p])/N/p
+  Ceps <- sum(diag(
+    crossprod(rbind(W,t(beta) %*% W))%*%invZtilde
+  )) + ssq(mu_EF[,-(1:p)])/N
+
+  ## log of det SigmaXY, see matrix determinant lemma
+  logdet <- log(det(diag(r) + GGef%*%SigmaZ))+p*log(sig2E)+log(sig2eps)
+  ## representation of SigmaXY %*% invS
+  XYinvS <- ssq(cbind(X/sqrt(sig2E), y/sqrt(sig2eps)))
+  XYinvS <- XYinvS - sum(diag(crossprod(dataXY %*% GammaEF) %*% invZtilde))
+  ## Log likelihood
+  loglik = N*(p+1)*log(2*pi) + N * logdet + XYinvS
+  loglik = - loglik/2
+  # MASS::ginv(t(0))
+
+  # comp_log <- - N/2*(p+q)*log(2*pi)
+  # comp_log <- comp_log - N/2*(p*log(sig2E)+q*log(sig2F))
+  # comp_log <- comp_log - N/2*ssq(cbind(X/sqrt(sig2E), Y/sqrt(sig2F)))
+  # comp_log <- comp_log + N*sum(diag(crossprod(EZc,dataXY)%*%GammaEF))
+  # comp_log <- comp_log - N/2*sum(diag(GGef%*%Szz))
+
+  list(
+    EZc = EZc,
+    Szz = Szz,
+    mu_T = matrix(EZc[,1:r],N,r),
+    Stt = matrix(Szz[1:r, 1:r],r,r),
+    See = Cee,
+    Seps = Ceps,
+    loglik = loglik
+  )
+}
+
+M_step.ppls1 <- function(fit,X,y){
+  outp = with(fit,{
+    list(
+      W = orth(t(X) %*% mu_T,type=type),
+      B = Cut %*% solve(Stt),
+      sigE = sqrt(tr(Cee)/ncol(Cee)),
+      sigeps = sqrt(tr(Cff)/ncol(Cff)),
+      sigT = sqrt(Ctt * diag(1,nrow(Ctt)))
+    )
+  })
+  return(outp)
+}

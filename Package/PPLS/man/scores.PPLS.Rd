@@ -4,7 +4,7 @@
 \alias{scores.PPLS}
 \title{Get scores from PPLS fit.}
 \usage{
-scores.PPLS(fit, X, Y, subset = NULL)
+\method{scores}{PPLS}(fit, X, Y, subset = NULL)
 }
 \arguments{
 \item{fit}{A PPLS fit (an object of class PPLS)}
