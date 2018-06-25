@@ -726,11 +726,11 @@ Expect_M <- function(X,Y,W,C,B,sigE,sigF,sigH,sigT,debug=F){
 #' @return A list with updated estimates W, C, B, sigE, sigF, sigH and sigT.
 #'
 #' @export
-Maximiz_M <- function(fit,X,Y, type = c("SVD","QR")){
+Maximiz_M <- function(fit,X,Y, type = c("SVD","QR"), lasso_lambda = c(0,0)){
   outp = with(fit,{
     list(
-      W = orth(t(X) %*% mu_T,type=type),
-      C = orth(t(Y) %*% mu_U,type=type),
+      W = (orth(t(X) %*% mu_T,type=type) %>% soft_thres(lasso_lambda[1])),
+      C = (orth(t(Y) %*% mu_U,type=type) %>% soft_thres(lasso_lambda[2])),
       B = Cut %*% solve(Ctt) * diag(1,nrow(Cut)),
       sigE = sqrt(tr(Cee)/ncol(Cee)),
       sigF = sqrt(tr(Cff)/ncol(Cff)),
@@ -755,7 +755,7 @@ Maximiz_M <- function(fit,X,Y, type = c("SVD","QR")){
 #' @return list of class PPLS_simul with expectations, loglikelihoods and estimates.
 #'
 #' @export
-PPLS_simult <- function(X, Y, a, EMsteps = 10, atol = 1e-4, type = c("SVD","QR"), ...){
+PPLS_simult <- function(X, Y, a, EMsteps = 10, atol = 1e-4, type = c("SVD","QR"), lasso_lambda=c(0,0),...){
   p = ncol(X)
   q = ncol(Y)
   type = match.arg(type)
@@ -772,14 +772,14 @@ PPLS_simult <- function(X, Y, a, EMsteps = 10, atol = 1e-4, type = c("SVD","QR")
 
   signLoad = sign(diag(sigT. %*% B.))
   rotLoad = order(diag(sigT. %*% B. %*% diag(signLoad,a)), decreasing=TRUE)
-  W. = W.[,rotLoad] %*% diag(signLoad, a)
-  C. = C.[,rotLoad] %*% diag(signLoad, a)
+  W. = orth(W.[,rotLoad] %*% diag(signLoad, a), type=type)
+  C. = orth(C.[,rotLoad] %*% diag(signLoad, a), type=type)
   B. = diag(diag(B. %*% diag(signLoad, a))[rotLoad],a)
   sigT. = diag(diag(sigT.)[rotLoad],a)
 
   logl_incr = 1:EMsteps*NA
   for(i in 1:EMsteps){
-    Expect_M(X,Y,W.,C.,B.,sigE.,sigF.,sigH.,sigT.,...) %>% Maximiz_M(X,Y,type) -> outp
+    Expect_M(X,Y,W.,C.,B.,sigE.,sigF.,sigH.,sigT.,...) %>% Maximiz_M(X,Y,type,lasso_lambda) -> outp
     W. = outp$W
     C. = outp$C
     B. = outp$B
@@ -793,8 +793,8 @@ PPLS_simult <- function(X, Y, a, EMsteps = 10, atol = 1e-4, type = c("SVD","QR")
   }
   signLoad = sign(diag(sigT. %*% B.))
   rotLoad = order(diag(sigT. %*% B. %*% diag(signLoad,a)), decreasing=TRUE)
-  outp$W = W.[,rotLoad] %*% diag(signLoad, a)
-  outp$C = C.[,rotLoad] %*% diag(signLoad, a)
+  outp$W = W.[,rotLoad] %*% diag(signLoad, a) %>% orth(type=type)
+  outp$C = C.[,rotLoad] %*% diag(signLoad, a) %>% orth(type=type)
   outp$B = diag(diag(B. %*% diag(signLoad, a))[rotLoad],a)
   outp$sigT = diag(diag(sigT.)[rotLoad],a)
   logl_incr = logl_incr[1:i]
@@ -875,7 +875,7 @@ center <- function(X){
 }
 
 #' @export
-crossval_lasso <- function(X, y, r, grid_lambda, nr_folds = 10, nr_cores = 1, ...){
+crossval_lasso <- function(X, Y, r, grid_lambda, nr_folds = 10, nr_cores = 1, ...){
   tic = proc.time()
   X <- as.matrix(X)
   stopifnot(ncol(X) > r, nrow(X) >= nr_folds)
@@ -886,22 +886,24 @@ crossval_lasso <- function(X, y, r, grid_lambda, nr_folds = 10, nr_cores = 1, ..
   folds <- sample(nrow(X))
   blocks <- cut(seq(1:nrow(X)), breaks = nr_folds, labels = F)
   parms = data.frame(fold.i = 1:nr_folds)
-  parms = merge(parms, data.frame(lambda = grid_lambda))
+  parms = merge(parms, data.frame(lambdaW = grid_lambda))
+  parms = merge(parms, data.frame(lambdaC = grid_lambda))
 
   parms = apply(parms, 1, as.list)
   outp = parallelsugar::mclapply(mc.cores = nr_cores, parms, function(e, ...) {
     ii <- folds[which(blocks == e$fold.i)]
-    fit = suppressWarnings(PPLS(X[-ii,], Y[-ii,], r, ...))
-    fit$W <- orth(soft_thres(fit$W, c(e$lambda)))
-    fit$C <- orth(soft_thres(fit$C, c(e$lambda)))
-    return(ssq(center(Y[ii,]) - center(X[ii,] %*% fit$W %*% diag(fit$B,r) %*% t(fit$C)))/nrow(X))
+    fit = suppressWarnings(PPLS_simult(X[-ii,], Y[-ii,], r, lasso_lambda = c(e$lambdaW,e$lambdaC), ...))
+    #fit$W <- orth(soft_thres(fit$W, c(e$lambda)))
+    #fit$C <- orth(soft_thres(fit$C, c(e$lambda)))
+    return(ssq(center(Y[ii,]) - center(X[ii,] %*% with(fit$est, W %*% B %*% t(C))))/nrow(X))
   })
-  outp <- (matrix(unlist(outp),nr_folds))
-  colnames(outp) <- paste0("lambda=",round(grid_lambda,3))
-  outp2 <- colMeans(outp)
-  message("Best lambda is ", grid_lambda[which.min(outp2)])
+  outp <- array(unlist(outp),dim = c(nr_folds,length(grid_lambda),length(grid_lambda)))
+  dimnames(outp) <- list(NULL,paste0(expression(lbd_W),"=",round(grid_lambda,3)),paste0(expression(lbd_C),"=",round(grid_lambda,3)))
+  outp2 <- apply(outp, c(2,3),mean)
+  message("Best lambda's are ", paste(grid_lambda[which(outp2 == min(outp2), arr.ind = T)],collapse = ' and '))
   toc = proc.time() - tic
-  list(errors = outp, time = round(toc[3], 2))
+  message("time elapsed: ", round(toc[3],2))
+  invisible(list(errors = outp, time = round(toc[3], 2)))
 }
 
 

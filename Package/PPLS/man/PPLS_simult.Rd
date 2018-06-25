@@ -5,7 +5,7 @@
 \title{The PPLS fitting function}
 \usage{
 PPLS_simult(X, Y, a, EMsteps = 10, atol = 1e-04, type = c("SVD", "QR"),
-  ...)
+  lasso_lambda = c(0, 0), ...)
 }
 \arguments{
 \item{X}{First dataset.}

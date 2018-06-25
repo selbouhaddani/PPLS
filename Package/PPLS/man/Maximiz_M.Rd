@@ -4,7 +4,7 @@
 \alias{Maximiz_M}
 \title{The M step}
 \usage{
-Maximiz_M(fit, X, Y, type = c("SVD", "QR"))
+Maximiz_M(fit, X, Y, type = c("SVD", "QR"), lasso_lambda = c(0, 0))
 }
 \arguments{
 \item{fit}{A list as produced by \code{\link{Expect_M}}}
