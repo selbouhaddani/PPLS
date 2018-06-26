@@ -789,12 +789,12 @@ PPLS_simult <- function(X, Y, a, EMsteps = 10, atol = 1e-4, type = c("SVD","QR")
     sigT. = outp$sigT
 
     logl_incr[i] = logl_W(X,Y,W.,C.,B.,sigE.,sigF.,sigH.,sigT.)
-    if(i > 1 && diff(logl_incr)[i-1] < atol){ break}
+    if(i > 1 && abs(diff(logl_incr)[i-1]) < atol){ break}
   }
   signLoad = sign(diag(sigT. %*% B.))
   rotLoad = order(diag(sigT. %*% B. %*% diag(signLoad,a)), decreasing=TRUE)
-  outp$W = W.[,rotLoad] %*% diag(signLoad, a) %>% orth(type=type)
-  outp$C = C.[,rotLoad] %*% diag(signLoad, a) %>% orth(type=type)
+  outp$W = W.[,rotLoad] %*% diag(signLoad, a) %>% soft_thres(lasso_lambda[1]) #%>% orth(type=type)
+  outp$C = C.[,rotLoad] %*% diag(signLoad, a) %>% soft_thres(lasso_lambda[1]) #%>% orth(type=type)
   outp$B = diag(diag(B. %*% diag(signLoad, a))[rotLoad],a)
   outp$sigT = diag(diag(sigT.)[rotLoad],a)
   logl_incr = logl_incr[1:i]
