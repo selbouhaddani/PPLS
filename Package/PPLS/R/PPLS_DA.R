@@ -159,10 +159,11 @@ PPLS_simult_DA <- function(X, Y, a, EMsteps = 10, atol = 1e-4, type = c("SVD","Q
   sigH. = sd(Y - init_fit$u%*%B.)
   sigT. = diag(init_fit$d[1:a],a) # diag(1,a)
 
-  logl_incr = 1:EMsteps*NA
+#  logl_incr = 1:EMsteps*NA
   err <- 1:EMsteps*NA
   for(i in 1:EMsteps){
     Expect_M_DA(X,Y,W.,C.,B.,sigE.,sigF.,sigH.,sigT.,...) %>% Maximiz_M_DA(X,Y,type) -> outp
+    err[i] <- crossprod(outp$W, W.) %>% abs %>% max
     W. = outp$W
     C. = outp$C
     B. = outp$B
@@ -170,9 +171,9 @@ PPLS_simult_DA <- function(X, Y, a, EMsteps = 10, atol = 1e-4, type = c("SVD","Q
     sigF. = outp$sigF
     sigH. = outp$sigH
     sigT. = outp$sigT
-    err[i] <- crossprod(parms$W, W.) %>% abs %>% max
     #logl_incr[i] = logl_W(X,Y,W.,C.,B.,sigE.,sigF.,sigH.,sigT.)
     #if(i > 1 && diff(logl_incr)[i-1] < atol){ break}
+    #if(i > 1 && diff(err)[i-1] < (1 - atol) ){ break }
   }
   # signLoad = sign(diag(sigT. %*% B.))
   # rotLoad = order(diag(sigT. %*% B. %*% diag(signLoad,a)), decreasing=TRUE)
@@ -183,8 +184,38 @@ PPLS_simult_DA <- function(X, Y, a, EMsteps = 10, atol = 1e-4, type = c("SVD","Q
   # logl_incr = logl_incr[1:i]
   # if(any(diff(logl_incr) < 0)) warning("Negative increments of likelihood")
   # Eout = Expect_M(X,Y,W.,C.,B.,sigE.,sigF.,sigH.,sigT.)
-  outpt = list(estimates = outp, error = err)
+  outpt = list(estimates = outp, error = err[1:i])
   #
   # class(outpt) <- "PPLS_simult"
   outpt
 }
+
+library(magrittr)
+library(OmicsPLS)
+N <- 100
+N_test <- 1000
+p <- 20
+q <- 1
+r <- 3
+Tt <- matrix(rnorm(N*r),N)
+W = orth(matrix(rt(p*r,2),p))
+X <- tcrossprod(Tt, W)
+X <- X + matrix(rnorm(prod(dim(X)), sd=0.2*sd(X)),nrow(X))
+X %<>% scale(scale=F)
+B <- diag(1,r,q)
+Y <- Tt %*% B
+Y <- Y + matrix(rnorm(prod(dim(Y)),sd = 0.2*sd(Y)),nrow(Y))
+Y %<>% scale(scale=F)
+fit <- PPLS_simult_DA(X,Y,ncol(Tt),1e3,1e-6)
+crossprod(fit$est$W, W)
+
+Tt_test <- matrix(rnorm(N_test*r),N_test)
+X_test <- tcrossprod(Tt_test, W)
+X_test <- X_test + matrix(rnorm(prod(dim(X_test)), sd=0.2*sd(X_test)),nrow(X_test))
+X_test %<>% scale(scale=F)
+Y_test <- Tt_test %*% B
+Y_test <- Y_test + matrix(rnorm(prod(dim(Y_test)),sd = 0.2*sd(Y_test)),nrow(Y_test))
+Y_test %<>% scale(scale=F)
+
+ssq(Y_test - X_test %*% coef(lm(Y~X-1)))/nrow(Y_test)
+ssq(Y_test - X_test %*% fit$es$W %*% fit$es$B)/nrow(Y_test)
