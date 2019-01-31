@@ -37,7 +37,7 @@ Expect_M_DA <- function(X,Y,W,C,B,sigE,sigF,sigH,sigT,debug=T){
     mu_T = cbind(X,Y) %*% invS %*% covT
     mu_U = cbind(X,Y) %*% invS %*% covU
 
-    sigU = sqrt(t(B)%*%sigT^2%*%B + sigH^2)
+    sigU = sqrt(abs(t(B)%*%sigT^2%*%B + sigH^2))
     Ctt = sigT^2 - t(covT) %*% invS %*% covT + crossprod(mu_T) / N
     Cuu = sigU^2 - t(covU) %*% invS %*% covU + crossprod(mu_U) / N
     Cut = t(B) %*% sigT^2 - t(covU) %*% invS %*% covT + crossprod(mu_U,mu_T) / N
@@ -192,30 +192,43 @@ PPLS_simult_DA <- function(X, Y, a, EMsteps = 10, atol = 1e-4, type = c("SVD","Q
 
 library(magrittr)
 library(OmicsPLS)
-N <- 100
+library(PPLS)
+N <- 50
 N_test <- 1000
 p <- 20
-q <- 1
-r <- 3
+q <- 3
+r <- 2
 Tt <- matrix(rnorm(N*r),N)
 W = orth(matrix(rt(p*r,2),p))
 X <- tcrossprod(Tt, W)
 X <- X + matrix(rnorm(prod(dim(X)), sd=0.2*sd(X)),nrow(X))
-X %<>% scale(scale=F)
+X %<>% scale(scale=T)
 B <- diag(1,r,q)
 Y <- Tt %*% B
 Y <- Y + matrix(rnorm(prod(dim(Y)),sd = 0.2*sd(Y)),nrow(Y))
-Y %<>% scale(scale=F)
-fit <- PPLS_simult_DA(X,Y,ncol(Tt),1e3,1e-6)
-crossprod(fit$est$W, W)
+Y %<>% scale(scale=T)
+
+#X <- matrix(rnorm(N*p),N) %>% scale
+#Y <- X %*% orth(cbind(1:p, rep(1,p))) %>% scale
+
+fit <- PPLS_simult_DA(X,Y,r,1e3,1e-6)
+fit2 <- PPLS_simult(X, Y, r, 1e3, 1e-6)
+#crossprod(fit$est$W, W)
+
 
 Tt_test <- matrix(rnorm(N_test*r),N_test)
 X_test <- tcrossprod(Tt_test, W)
 X_test <- X_test + matrix(rnorm(prod(dim(X_test)), sd=0.2*sd(X_test)),nrow(X_test))
-X_test %<>% scale(scale=F)
+X_test %<>% scale(scale=T)
 Y_test <- Tt_test %*% B
 Y_test <- Y_test + matrix(rnorm(prod(dim(Y_test)),sd = 0.2*sd(Y_test)),nrow(Y_test))
-Y_test %<>% scale(scale=F)
+Y_test %<>% scale(scale=T)
 
-ssq(Y_test - X_test %*% coef(lm(Y~X-1)))/nrow(Y_test)
-ssq(Y_test - X_test %*% fit$es$W %*% fit$es$B)/nrow(Y_test)
+#X_test <- matrix(rnorm(N_test*p),N_test) %>% scale
+#Y_test <- X_test %*% orth(cbind(1:p, rep(1,p))) %>% scale
+
+ssq(Y_test - predict(pls::plsr(Y~X, ncomp=r), X_test, ncomp=r)[,,1])/ssq(Y_test)
+ssq(Y_test - X_test %*% coef(lm(Y~X-1)))/ssq(Y_test)
+ssq(Y_test - X_test %*% fit$es$W %*% fit$es$B)/ssq(Y_test)
+ssq(Y_test - X_test %*% fit2$es$W %*% fit2$es$B %*% t(fit2$es$C))/ssq(Y_test)
+
